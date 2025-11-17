@@ -1,0 +1,470 @@
+  import React, { useState, useEffect } from "react";
+  import Calendar from "react-calendar";
+  import "react-calendar/dist/Calendar.css";
+  import "../App.css";
+
+  function Admin({ onLogout }) {
+    const [activeTab, setActiveTab] = useState("dashboard");
+    const [seminars, setSeminars] = useState([]);
+
+    const [title, setTitle] = useState("");
+    const [duration, setDuration] = useState("");
+    const [speaker, setSpeaker] = useState("");
+    const [participants, setParticipants] = useState("");
+    const [date, setDate] = useState("");
+
+    // Load seminars from localStorage on mount
+    useEffect(() => {
+      const storedSeminars = JSON.parse(localStorage.getItem("seminars")) || [];
+      setSeminars(storedSeminars);
+
+      const handleStorageChange = () => {
+        setSeminars(JSON.parse(localStorage.getItem("seminars")) || []);
+      };
+      window.addEventListener("storage", handleStorageChange);
+      return () => window.removeEventListener("storage", handleStorageChange);
+    }, []);
+
+    const handleCreateSeminar = (e) => {
+      e.preventDefault();
+      if (!title || !duration || !speaker || !participants || !date) {
+        alert("Please fill out all fields.");
+        return;
+      }
+
+      const newSeminar = {
+        title,
+        duration,
+        speaker,
+        participants,
+        date,
+        joinedParticipants: [], // Track who joined
+        questions: [   
+          {
+            id: "q1",
+            question: "Rate the speaker's clarity",
+            type: "select",
+            options: ["Excellent", "Good", "Average", "Poor"] 
+          }, 
+          {
+            id: "q2",
+            question: "How relevant was the seminar content?",
+            type: "select",
+            options: ["Very Relevant", "Somewhat Relevant", "Not Relevant"]
+          },
+          {
+            id: "q3",
+            question: "Any suggestions?",
+            type: "text", 
+          } // Default evaluation questions
+        ]
+      };
+
+      const updated = [...seminars, newSeminar];
+      setSeminars(updated);
+      localStorage.setItem("seminars", JSON.stringify(updated));
+
+      setTitle("");
+      setDuration("");
+      setSpeaker("");
+      setParticipants("");
+      setDate("");
+
+      alert("Seminar created successfully!");
+    };
+
+    const handleDelete = (index) => {
+      const updated = seminars.filter((_, i) => i !== index);
+      setSeminars(updated);
+      localStorage.setItem("seminars", JSON.stringify(updated));
+    };
+
+    // Get joined participants from localStorage
+    const getJoinedCount = (title) => {
+      const joined = JSON.parse(localStorage.getItem("joinedSeminars")) || [];
+      return joined.filter(s => s.title === title).length;
+    };
+
+    return (
+      <div className="admin-dashboard">
+        {/* Sidebar */}
+        <aside className="sidebar">
+          <div style={{ textAlign: "center", marginBottom: "1.5rem", paddingBottom: "1.5rem", borderBottom: "2px solid rgba(255, 255, 255, 0.2)" }}>
+            <img src="/logo.png" alt="Logo" style={{ width: "60px", height: "60px", marginBottom: "0.8rem" }} />
+            <h2 className="logo" style={{ margin: 0, fontSize: "1.3rem", color: "#ffffff", fontWeight: "700" }}>VPAA System</h2>
+          </div>
+          <ul>
+            <li className={activeTab === "dashboard" ? "active" : ""} onClick={() => setActiveTab("dashboard")} style={{ cursor: "pointer" }}>Dashboard</li>
+            <li className={activeTab === "create" ? "active" : ""} onClick={() => setActiveTab("create")} style={{ cursor: "pointer" }}>Create Seminar</li>
+            <li className={activeTab === "list" ? "active" : ""} onClick={() => setActiveTab("list")} style={{ cursor: "pointer" }}>Seminar List</li>
+          </ul>
+          <button className="logout" onClick={onLogout}>Logout</button>
+        </aside>
+
+        {/* Main Content */}
+        <main className="content">
+          <header className="content-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
+            <div>
+              <h1 style={{ margin: 0 }}>
+                {activeTab === "dashboard" && "Admin Dashboard"}
+                {activeTab === "create" && "Create New Seminar"}
+                {activeTab === "list" && "Manage Seminars"}
+              </h1>
+              <p style={{ margin: "0.5rem 0 0 0", color: "#666", fontSize: "0.95rem" }}>
+                {activeTab === "dashboard" && "Welcome back! Here's your seminar overview"}
+                {activeTab === "create" && "Create a new seminar and add it to the system"}
+                {activeTab === "list" && "View and manage all seminars"}
+              </p>
+            </div>
+          </header>
+
+          {/* Dashboard Overview */}
+          {activeTab === "dashboard" && (
+            <div className="dashboard-overview">
+              <div className="card stats" style={{
+                background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
+                border: "2px solid #e0e0e0",
+                position: "relative",
+                overflow: "hidden"
+              }}>
+                <div style={{
+                  position: "absolute",
+                  top: 0,
+                  right: 0,
+                  width: "100px",
+                  height: "100px",
+                  background: "radial-gradient(circle, rgba(196, 30, 58, 0.1), transparent)",
+                  borderRadius: "50%"
+                }}></div>
+                <h3 style={{ color: "#1a3a52", position: "relative" }}>Total Seminars</h3>
+                <p style={{ fontSize: "3rem", margin: "0.5rem 0", position: "relative" }}>{seminars.length}</p>
+                <p style={{ fontSize: "0.85rem", color: "#666", margin: 0, position: "relative" }}>
+                  {seminars.length === 1 ? "1 seminar" : `${seminars.length} seminars`}
+                </p>
+              </div>
+
+              <div className="card stats" style={{
+                background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
+                border: "2px solid #e0e0e0",
+                position: "relative",
+                overflow: "hidden"
+              }}>
+                <div style={{
+                  position: "absolute",
+                  top: 0,
+                  right: 0,
+                  width: "100px",
+                  height: "100px",
+                  background: "radial-gradient(circle, rgba(26, 58, 82, 0.1), transparent)",
+                  borderRadius: "50%"
+                }}></div>
+                <h3 style={{ color: "#1a3a52", position: "relative" }}>Total Participants</h3>
+                <p style={{ fontSize: "3rem", margin: "0.5rem 0", position: "relative", color: "#1a3a52" }}>
+                  {seminars.reduce((total, s) => total + (parseInt(s.participants) || 0), 0)}
+                </p>
+                <p style={{ fontSize: "0.85rem", color: "#666", margin: 0, position: "relative" }}>
+                  across all seminars
+                </p>
+              </div>
+
+              <div className="card stats" style={{
+                background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
+                border: "2px solid #e0e0e0",
+                position: "relative",
+                overflow: "hidden"
+              }}>
+                <div style={{
+                  position: "absolute",
+                  top: 0,
+                  right: 0,
+                  width: "100px",
+                  height: "100px",
+                  background: "radial-gradient(circle, rgba(196, 30, 58, 0.1), transparent)",
+                  borderRadius: "50%"
+                }}></div>
+                <h3 style={{ color: "#1a3a52", position: "relative" }}>Joined</h3>
+                <p style={{ fontSize: "3rem", margin: "0.5rem 0", position: "relative", color: "#c41e3a" }}>
+                  {seminars.reduce((total, s) => total + getJoinedCount(s.title), 0)}
+                </p>
+                <p style={{ fontSize: "0.85rem", color: "#666", margin: 0, position: "relative" }}>
+                  total participants
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Create Seminar Section */}
+          {activeTab === "create" && (
+            <div className="card form-card" style={{
+              background: "#ffffff",
+              borderRadius: "16px",
+              padding: "2rem",
+              boxShadow: "0 8px 25px rgba(0,0,0,0.08)"
+            }}>
+              <form onSubmit={handleCreateSeminar} style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                <div>
+                  <label style={{ fontWeight: "600", color: "#1a3a52", display: "block", marginBottom: "0.5rem" }}>
+                    Seminar Title
+                  </label>
+                  <input 
+                    value={title} 
+                    onChange={(e) => setTitle(e.target.value)} 
+                    placeholder="e.g., Advanced React Development" 
+                    style={{
+                      width: "100%",
+                      padding: "0.95rem",
+                      border: "2px solid #e0e0e0",
+                      borderRadius: "10px",
+                      fontSize: "1rem",
+                      transition: "all 0.3s",
+                      boxSizing: "border-box"
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = "#c41e3a"}
+                    onBlur={(e) => e.target.style.borderColor = "#e0e0e0"}
+                  />
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+                  <div>
+                    <label style={{ fontWeight: "600", color: "#1a3a52", display: "block", marginBottom: "0.5rem" }}>
+                      Duration (hours)
+                    </label>
+                    <input 
+                      type="number" 
+                      value={duration} 
+                      onChange={(e) => setDuration(e.target.value)} 
+                      placeholder="2" 
+                      style={{
+                        width: "100%",
+                        padding: "0.95rem",
+                        border: "2px solid #e0e0e0",
+                        borderRadius: "10px",
+                        fontSize: "1rem",
+                        transition: "all 0.3s",
+                        boxSizing: "border-box"
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = "#c41e3a"}
+                      onBlur={(e) => e.target.style.borderColor = "#e0e0e0"}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontWeight: "600", color: "#1a3a52", display: "block", marginBottom: "0.5rem" }}>
+                      Seminar Date
+                    </label>
+                    <input 
+                      type="date" 
+                      value={date} 
+                      onChange={(e) => setDate(e.target.value)} 
+                      style={{
+                        width: "100%",
+                        padding: "0.95rem",
+                        border: "2px solid #e0e0e0",
+                        borderRadius: "10px",
+                        fontSize: "1rem",
+                        transition: "all 0.3s",
+                        boxSizing: "border-box"
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = "#c41e3a"}
+                      onBlur={(e) => e.target.style.borderColor = "#e0e0e0"}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontWeight: "600", color: "#1a3a52", display: "block", marginBottom: "0.5rem" }}>
+                    Speaker / Trainer
+                  </label>
+                  <input 
+                    value={speaker} 
+                    onChange={(e) => setSpeaker(e.target.value)} 
+                    placeholder="Speaker Name" 
+                    style={{
+                      width: "100%",
+                      padding: "0.95rem",
+                      border: "2px solid #e0e0e0",
+                      borderRadius: "10px",
+                      fontSize: "1rem",
+                      transition: "all 0.3s",
+                      boxSizing: "border-box"
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = "#c41e3a"}
+                    onBlur={(e) => e.target.style.borderColor = "#e0e0e0"}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontWeight: "600", color: "#1a3a52", display: "block", marginBottom: "0.5rem" }}>
+                    Max Participants
+                  </label>
+                  <input 
+                    type="number" 
+                    value={participants} 
+                    onChange={(e) => setParticipants(e.target.value)} 
+                    placeholder="50" 
+                    style={{
+                      width: "100%",
+                      padding: "0.95rem",
+                      border: "2px solid #e0e0e0",
+                      borderRadius: "10px",
+                      fontSize: "1rem",
+                      transition: "all 0.3s",
+                      boxSizing: "border-box"
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = "#c41e3a"}
+                    onBlur={(e) => e.target.style.borderColor = "#e0e0e0"}
+                  />
+                </div>
+
+                <button 
+                  type="submit" 
+                  className="primary-btn"
+                  style={{
+                    background: "linear-gradient(135deg, #c41e3a, #a01831)",
+                    color: "white",
+                    padding: "1rem",
+                    borderRadius: "10px",
+                    border: "none",
+                    fontSize: "1rem",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                    marginTop: "1rem",
+                    transition: "all 0.3s",
+                    boxShadow: "0 4px 15px rgba(196, 30, 58, 0.2)"
+                  }}
+                  onMouseOver={(e) => e.target.style.boxShadow = "0 6px 20px rgba(196, 30, 58, 0.3)"}
+                  onMouseOut={(e) => e.target.style.boxShadow = "0 4px 15px rgba(196, 30, 58, 0.2)"}
+                >
+                  Create Seminar
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* Seminar List Section */}
+          {activeTab === "list" && (
+            <div className="seminar-list-container">
+              {seminars.length === 0 ? (
+                <div style={{
+                  background: "#f8fafc",
+                  padding: "3rem",
+                  borderRadius: "16px",
+                  textAlign: "center",
+                  border: "2px dashed #e0e0e0"
+                }}>
+                  <p style={{ fontSize: "1.1rem", color: "#666", margin: 0 }}>No seminars created yet.</p>
+                  <p style={{ color: "#999", fontSize: "0.95rem", margin: "0.5rem 0 0 0" }}>
+                    Create your first seminar to get started!
+                  </p>
+                </div>
+              ) : (
+                <div className="seminar-grid">
+                  {seminars.map((s, i) => (
+                    <div 
+                      key={i}
+                      style={{
+                        background: "#ffffff",
+                        borderRadius: "16px",
+                        padding: "1.5rem",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                        transition: "all 0.3s",
+                        border: "2px solid #f0f0f0",
+                        cursor: "pointer",
+                        position: "relative"
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.boxShadow = "0 8px 24px rgba(196, 30, 58, 0.15)";
+                        e.currentTarget.style.transform = "translateY(-4px)";
+                        e.currentTarget.style.borderColor = "#c41e3a";
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
+                        e.currentTarget.style.transform = "translateY(0)";
+                        e.currentTarget.style.borderColor = "#f0f0f0";
+                      }}
+                    >
+                      <div style={{
+                        position: "absolute",
+                        top: "1rem",
+                        right: "1rem",
+                        background: "#c41e3a",
+                        color: "white",
+                        padding: "0.4rem 0.8rem",
+                        borderRadius: "20px",
+                        fontSize: "0.85rem",
+                        fontWeight: "600"
+                      }}>
+                        {getJoinedCount(s.title)}/{s.participants} joined
+                      </div>
+
+                      <h3 style={{
+                        fontSize: "1.3rem",
+                        fontWeight: "600",
+                        color: "#1a3a52",
+                        marginBottom: "1rem",
+                        marginTop: 0,
+                        paddingRight: "100px"
+                      }}>
+                        {s.title}
+                      </h3>
+
+                      <div style={{ display: "grid", gap: "0.8rem", marginBottom: "1.5rem" }}>
+                        <p style={{ margin: 0, color: "#666", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <strong style={{ color: "#1a3a52", width: "80px" }}>Date:</strong>
+                          {new Date(s.date).toLocaleDateString()}
+                        </p>
+                        <p style={{ margin: 0, color: "#666", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <strong style={{ color: "#1a3a52", width: "80px" }}>Duration:</strong>
+                          {s.duration} hours
+                        </p>
+                        <p style={{ margin: 0, color: "#666", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <strong style={{ color: "#1a3a52", width: "80px" }}>Speaker:</strong>
+                          {s.speaker}
+                        </p>
+                        <p style={{ margin: 0, color: "#666", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <strong style={{ color: "#1a3a52", width: "80px" }}>Capacity:</strong>
+                          {s.participants} max
+                        </p>
+                      </div>
+
+                      <button 
+                        onClick={() => {
+                          if (window.confirm(`Are you sure you want to delete "${s.title}"?`)) {
+                            handleDelete(i);
+                          }
+                        }}
+                        style={{
+                          width: "100%",
+                          padding: "0.8rem",
+                          background: "#f5f5f5",
+                          border: "2px solid #e0e0e0",
+                          borderRadius: "10px",
+                          color: "#c41e3a",
+                          fontWeight: "600",
+                          cursor: "pointer",
+                          transition: "all 0.3s"
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.background = "#c41e3a";
+                          e.currentTarget.style.color = "white";
+                          e.currentTarget.style.borderColor = "#c41e3a";
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.background = "#f5f5f5";
+                          e.currentTarget.style.color = "#c41e3a";
+                          e.currentTarget.style.borderColor = "#e0e0e0";
+                        }}
+                      >
+                        Delete Seminar
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </main>
+      </div>
+    );
+  }
+
+  export default Admin;

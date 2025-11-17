@@ -1,0 +1,1010 @@
+/* =========================================================
+   GENERAL STYLES
+========================================================= */
+body {
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  background-color: #f5f7fa;
+  color: #1a3a52;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.3s ease;
+}
+
+/* =========================================================
+   PROFESSIONAL IT LOGIN PAGE - FIXED CARD
+========================================================= */
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 2rem;
+  background: linear-gradient(135deg, #1a3a52 0%, #2e5266 50%, #c41e3a 100%);
+  font-family: 'Poppins', sans-serif;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-container::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(196, 30, 58, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.login-container::after {
+  content: '';
+  position: absolute;
+  bottom: -30%;
+  left: -5%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(26, 58, 82, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.login-card {
+  background: #ffffff;
+  color: #222;
+  padding: 3rem 2.5rem;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+  text-align: center;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.login-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.3);
+}
+  
+.login-card h2 {
+  margin-bottom: rem;
+  color: #c41e3a;
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.login-card input {
+  width: 100%;
+  padding: 1rem;
+  margin: 0.5rem 0;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  transition: all 0.3s;
+}
+
+.login-card input:focus {
+  outline: none;
+  border-color: #c41e3a;
+  box-shadow: 0 0 8px rgba(196, 30, 58, 0.3);
+}
+
+.login-card button {
+  width: 100%;
+  padding: 1rem;
+  margin-top: 1.2rem;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #c41e3a, #a01831);
+  color: white;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.login-card button:hover {
+  background: linear-gradient(135deg, #a01831, #780f23);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Optional hint text */
+.hint {
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+/* Center header in container */
+.login-container .header {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: white;
+  position: relative;
+  z-index: 1;
+}
+
+.login-container .header h1 {
+  margin: 0;
+  font-size: 2.2rem;
+  font-weight: 700;
+}
+
+.login-container .header p {
+  margin-top: 0.3rem;
+  font-size: 1rem;
+  color: #cfd8dc;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .login-card {
+    padding: 2.5rem 1.5rem;
+  }
+
+  .login-card h2 {
+    font-size: 1.5rem;
+  }
+
+  .login-card input,
+  .login-card button {
+    font-size: 0.95rem;
+    padding: 0.9rem;
+  }
+}
+
+/* =========================================================
+   ADMIN DASHBOARD
+========================================================= */
+.admin-dashboard {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f0f2f7;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 260px;
+  background: linear-gradient(180deg, #1a3a52 0%, #2e5266 100%);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 2rem 1rem;
+  box-shadow: 2px 0 12px rgba(0,0,0,0.2);
+}
+
+.sidebar .logo {
+  text-align: center;
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar li {
+  padding: 1rem 1.2rem;
+  margin-bottom: 0.6rem;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: background 0.3s, transform 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.sidebar li.active,
+.sidebar li:hover {
+  background: #c41e3a;
+  transform: translateX(4px);
+}
+
+.logout {
+  background-color: #c41e3a;
+  border: none;
+  color: white;
+  padding: 0.9rem;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.logout:hover {
+  background-color: #a01831;
+}
+
+/* Main Content */
+.content {
+  flex: 1;
+  padding: 2.5rem 2rem;
+  overflow-x: hidden;
+}
+
+.content-header h1 {
+  font-size: 2rem;
+  color: #1a3a52;
+  margin-bottom: 2rem;
+  font-weight: 700;
+}
+
+/* Dashboard Overview */
+.dashboard-overview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+}
+
+.card {
+  background-color: #fff;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+}
+
+.stats {
+  flex: 1;
+  min-width: 180px;
+  text-align: center;
+}
+
+.stats h3 {
+  color: #1b2a47;
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+}
+
+.stats p {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #c41e3a;
+}
+
+.calendar-card {
+  flex: 2;
+}
+
+/* Form Card */
+.form-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.form-card label {
+  font-weight: 600;
+  color: #0d1b2a;
+}
+
+.form-card input {
+  padding: 0.95rem 1rem;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  transition: border 0.3s;
+}
+
+.form-card input:focus {
+  outline: none;
+  border-color: #c41e3a;
+  box-shadow: 0 0 6px rgba(196, 30, 58, 0.3);
+}
+
+.primary-btn {
+  background-color: #0057b7;
+  color: white;
+  border: none;
+  padding: 0.95rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.primary-btn:hover {
+  background-color: #003f8a;
+}
+
+/* Seminar List */
+.seminar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.8rem;
+}
+
+.seminar-card {
+  background: #ffffff;
+  border-left: 6px solid #c41e3a;
+  padding: 1.2rem 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  transition: all 0.3s ease;
+}
+
+.seminar-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.15);
+}
+
+.seminar-card h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.delete-btn {
+  margin-top: 1rem;
+  background-color: #c41e3a;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+}
+
+.delete-btn:hover {
+  background-color: #a01831;
+}
+
+/* =========================================================
+   PARTICIPANT DASHBOARD
+========================================================= */
+.participant-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.participant-sidebar {
+  width: 260px;
+  background: linear-gradient(180deg, #1a3a52 0%, #2e5266 100%);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 2rem 1rem;
+}
+
+.participant-sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+
+.participant-sidebar li {
+  padding: 1rem 1.2rem;
+  margin-bottom: 0.6rem;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: background 0.3s, transform 0.2s;
+}
+
+.participant-sidebar li.active,
+.participant-sidebar li:hover {
+  background: #c41e3a;
+  transform: translateX(4px);
+}
+
+.participant-content {
+  flex: 1;
+  padding: 2rem;
+}
+
+.card-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.certificate-card {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+}
+
+.certificate-card.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.certificate-btn {
+  margin-top: 0.8rem;
+  background: #0057b7;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+}
+
+.certificate-btn:hover {
+  background-color: #003f8a;
+}
+
+.cancel-btn {
+  background-color: #e74c3c;
+  color: white;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.cancel-btn:hover {
+  background-color: #c0392b;
+}
+
+.attendance-card-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.attendance-card {
+  background-color: #f4f7fa;
+  border-left: 5px solid #c41e3a;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  transition: 0.3s;
+}
+
+.attendance-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(196, 30, 58, 0.3);
+}
+
+.attendance-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.attendance-status {
+  background-color: #4a90e2;
+  color: white;
+  font-weight: bold;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.attendance-body p {
+  margin: 4px 0;
+}
+
+/* ==== EVALUATION DASHBOARD LAYOUT ==== */
+.evaluation-section {
+  padding: 30px;
+  background-color: #f8fafc;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+.evaluation-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 10px;
+}
+
+.evaluation-subtitle {
+  color: #6b7280;
+  margin-bottom: 30px;
+}
+
+/* Modern seminar cards for evaluation */
+.evaluation-container .card-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.8rem;
+  margin-top: 1rem;
+}
+
+.evaluation-container .seminar-card {
+  background: #ffffff;
+  border-left: 6px solid #c41e3a;
+  border-radius: 12px;
+  padding: 1.5rem 1.8rem;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.evaluation-container .seminar-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.15);
+}
+
+.evaluation-container .seminar-card h4 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #0d1b2a;
+}
+
+.evaluation-container .seminar-card p {
+  font-size: 0.95rem;
+  color: #333;
+  margin: 0.2rem 0;
+}
+
+.evaluation-container .seminar-card p strong {
+  color: #0057b7;
+}
+
+.evaluation-container .seminar-card .click-note {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+
+/* ==== SELECTED SEMINAR EVALUATION ==== */
+.evaluation-detail {
+  background: #fff;
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+
+.evaluation-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.progress-container {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  margin: 0 auto 30px auto;
+}
+
+.progress-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #c41e3a;
+}
+
+.progress-ring-circle {
+  transition: stroke-dashoffset 0.4s, stroke 0.4s ease;
+}
+
+.evaluation-form {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.evaluation-question-card {
+  background: #f9fafb;
+  border-radius: 10px;
+  padding: 15px 20px;
+  margin-bottom: 20px;
+}
+
+.evaluation-question-card label {
+  display: block;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.evaluation-question-card input,
+.evaluation-question-card select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.evaluation-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 25px;
+}
+
+/* Buttons */
+.primary-btn {
+  background: #2563eb;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.primary-btn:hover {
+  background: #1e3a8a;
+}
+
+.cancel-btn {
+  background: #9ca3af;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.cancel-btn:hover {
+  background: #fd0303;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+
+
+/* =========================================================
+   DYNAMIC ANIMATED EVALUATION PROGRESS BAR (FINAL)
+========================================================= */
+.evaluation-progress {
+  position: relative;
+  height: 25px;
+  width: 100%;
+  background: #e6eef8;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.evaluation-progress-fill {
+  height: 100%;
+  border-radius: 20px;
+  transition: width 0.6s ease-in-out, background 0.6s ease-in-out;
+  background: linear-gradient(90deg, #c41e3a, #a01831, #c41e3a);
+  background-size: 200% 100%;
+  animation: gradientFlow 3s infinite linear;
+}
+
+/* Dynamic glow for higher completion */
+.evaluation-progress-fill[data-progress="low"] {
+  box-shadow: 0 0 10px #c41e3a;
+}
+.evaluation-progress-fill[data-progress="medium"] {
+  background: linear-gradient(90deg, #c41e3a, #0d6efd, #1a3a52);
+  box-shadow: 0 0 15px #c41e3a;
+}
+.evaluation-progress-fill[data-progress="high"] {
+  background: linear-gradient(90deg, #00b894, #00e676, #00b894);
+  box-shadow: 0 0 20px #00e676;
+  animation: pulseGreen 1.5s infinite;
+}
+
+/* Smooth gradient wave */
+@keyframes gradientFlow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Pulse animation when completed */
+@keyframes pulseGreen {
+  0%, 100% { box-shadow: 0 0 10px #00e676; }
+  50% { box-shadow: 0 0 20px #00ff99; }
+}
+
+/* Percentage label */
+.evaluation-progress-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: 600;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+/* =========================================
+   COMPLETION CHECK ANIMATION
+========================================= */
+.evaluation-checkmark {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%) scale(0);
+  font-size: 1.3rem;
+  color: #c41e3a;
+  font-weight: bold;
+  opacity: 0;
+  animation: checkAppear 0.5s ease forwards;
+}
+
+@keyframes checkAppear {
+  0% {
+    transform: translateY(-50%) scale(0.5);
+    opacity: 0;
+  }
+  70% {
+    transform: translateY(-50%) scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-50%) scale(1);
+    opacity: 1;
+  }
+}
+
+
+.logout-btn {
+  background-color: #c41e3a;
+  border: none;
+  color: white;
+  padding: 0.9rem;
+  border-radius: 8px;
+  font-weight: 600;
+  width: 100%;
+  margin-top: auto;
+}
+
+/* Fade-in animation for evaluation form */
+.fade-in {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Circular progress animation */
+.circular-progress-wrapper {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  margin: 20px auto;
+}
+
+.progress-ring {
+  transform: rotate(-90deg);
+}
+
+.progress-ring-circle {
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.5s ease;
+  animation: pulseRing 2s infinite ease-in-out;
+}
+
+.progress-ring-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: bold;
+  font-size: 1.4rem;
+  color: #0d1b2a;
+}
+
+@keyframes pulseRing {
+  0% { stroke: #c41e3a; }
+  50% { stroke: #a01831; }
+  100% { stroke: #c41e3a; }
+}
+
+.evaluation-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  margin-top: 1.5rem;
+}
+
+.question-card {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  padding: 1.3rem 1.6rem;
+  transition: all 0.3s ease;
+  border-left: 5px solid #c41e3a;
+}
+
+.question-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+.question-text {
+  font-weight: 600;
+  color: #0d1b2a;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.input-text,
+.input-select,
+.input-textarea {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+.input-text:focus,
+.input-select:focus,
+.input-textarea:focus {
+  border-color: #c41e3a;
+}
+
+.input-textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.rating-stars {
+  display: flex;
+  gap: 0.4rem;
+  font-size: 1.6rem;
+}
+
+.star {
+  cursor: pointer;
+  color: #ccc;
+  transition: color 0.3s ease, transform 0.2s ease;
+}
+
+.star:hover {
+  transform: scale(1.2);
+  color: #c41e3a;
+}
+
+.star.filled {
+  color: #c41e3a;
+}
+
+.feedback-section {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.submit-btn {
+  align-self: flex-end;
+  margin-top: 1.2rem;
+  padding: 0.8rem 1.5rem;
+  font-weight: 600;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #c41e3a, #a01831);
+  color: #fff;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.submit-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 14px rgba(196, 30, 58, 0.3);
+}
+
+/* ============================
+   CERTIFICATE LAYOUT
+============================ */
+.certificate-layout {
+  width: 1120px;
+  height: 800px;
+  background: white;
+  border: 10px solid #c41e3a;
+  padding: 40px;
+  text-align: center;
+  font-family: "Poppins", sans-serif;
+  color: #0d1b2a;
+  box-shadow: 0 0 25px rgba(0,0,0,0.15);
+}
+
+.certificate-frame {
+  border: 6px double #c41e3a;
+  padding: 60px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.certificate-frame h2 {
+  font-size: 2.2rem;
+  color: #c41e3a;
+  margin-bottom: 10px;
+}
+
+.certificate-frame h1 {
+  font-size: 2.5rem;
+  color: #0d1b2a;
+  margin: 10px 0;
+}
+
+.certificate-frame h3 {
+  font-size: 1.5rem;
+  color: #c41e3a;
+  margin: 10px 0 20px;
+}
+
+.certificate-frame p {
+  font-size: 1.1rem;
+  color: #333;
+  margin: 5px 0;
+}
+
+.certificate-frame .date-text {
+  margin-top: 20px;
+  font-style: italic;
+  color: #555;
+}
+
+.signatures {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 40px;
+}
+
+.signatures div {
+  text-align: center;
+}
+
+.signatures p {
+  margin-bottom: 5px;
+  border-top: 2px solid #333;
+  display: inline-block;
+  width: 180px;
+}
+
+.signatures span {
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+
+
+/* =========================================================
+   RESPONSIVE DESIGN
+========================================================= */
+@media (max-width: 1024px) {
+  .sidebar, .participant-sidebar { width: 220px; }
+  .content, .participant-content { padding: 2rem; }
+}
+
+@media (max-width: 768px) {
+  .admin-dashboard, .participant-layout { flex-direction: column; }
+
+  .sidebar, .participant-sidebar {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-around;
+    padding: 1rem;
+  }
+
+  .sidebar ul, .participant-sidebar ul { display: flex; gap: 1rem; }
+
+  .sidebar li, .participant-sidebar li { padding: 0.6rem; font-size: 0.9rem; }
+
+  .seminar-grid, .card-list { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .stats p { font-size: 1.8rem; }
+  .form-card input, .primary-btn, .certificate-btn { font-size: 0.95rem; }
+}
