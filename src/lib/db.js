@@ -70,6 +70,19 @@ export async function fetchJoinedParticipants(seminarId) {
   return { data, error };
 }
 
+export async function fetchEvaluations(seminarId, participant_email) {
+  try {
+    const query = supabase.from('evaluations').select('*').eq('seminar_id', seminarId);
+    if (participant_email) query.eq('participant_email', participant_email);
+    const res = await query;
+    console.log('fetchEvaluations result:', res);
+    return res;
+  } catch (err) {
+    console.error('fetchEvaluations unexpected error:', err);
+    return { data: null, error: err };
+  }
+}
+
 export async function saveEvaluation(seminarId, participant_email, answers) {
   const payload = {
     seminar_id: seminarId,
@@ -82,6 +95,40 @@ export async function saveEvaluation(seminarId, participant_email, answers) {
     return res;
   } catch (err) {
     console.error('saveEvaluation unexpected error:', err);
+    return { data: null, error: err };
+  }
+}
+
+export async function checkInParticipant(seminarId, participant_email) {
+  try {
+    const payload = { present: true, check_in: new Date().toISOString() };
+    const res = await supabase
+      .from('joined_participants')
+      .update(payload)
+      .eq('seminar_id', seminarId)
+      .eq('participant_email', participant_email)
+      .select();
+    console.log('checkInParticipant result:', res);
+    return res;
+  } catch (err) {
+    console.error('checkInParticipant unexpected error:', err);
+    return { data: null, error: err };
+  }
+}
+
+export async function checkOutParticipant(seminarId, participant_email) {
+  try {
+    const payload = { present: false, check_out: new Date().toISOString() };
+    const res = await supabase
+      .from('joined_participants')
+      .update(payload)
+      .eq('seminar_id', seminarId)
+      .eq('participant_email', participant_email)
+      .select();
+    console.log('checkOutParticipant result:', res);
+    return res;
+  } catch (err) {
+    console.error('checkOutParticipant unexpected error:', err);
     return { data: null, error: err };
   }
 }
@@ -114,4 +161,6 @@ export default {
   fetchJoinedParticipants,
   saveEvaluation,
   saveAllSeminars,
+  checkInParticipant,
+  checkOutParticipant,
 };

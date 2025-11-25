@@ -8,6 +8,44 @@ body {
   color: #1a3a52;
 }
 
+/* Top-level non-blocking banner used for global messages (e.g. missing env keys) */
+.app-banner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.app-banner-inner {
+  pointer-events: auto;
+  background: rgba(196, 30, 58, 0.95);
+  color: #fff;
+  padding: 0.6rem 1rem;
+  margin: 0.8rem;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  max-width: 1100px;
+}
+.app-banner-close {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.app-banner-close:hover {
+  background: rgba(255,255,255,0.08);
+}
+
 button {
   cursor: pointer;
   font-family: inherit;
@@ -34,8 +72,8 @@ button {
   position: absolute;
   top: -50%;
   right: -10%;
-  width: 500px;
-  height: 500px;
+  width: clamp(180px, 30vmax, 500px);
+  height: clamp(180px, 30vmax, 500px);
   background: radial-gradient(circle, rgba(196, 30, 58, 0.1) 0%, transparent 70%);
   border-radius: 50%;
   pointer-events: none;
@@ -46,8 +84,8 @@ button {
   position: absolute;
   bottom: -30%;
   left: -5%;
-  width: 400px;
-  height: 400px;
+  width: clamp(140px, 24vmax, 400px);
+  height: clamp(140px, 24vmax, 400px);
   background: radial-gradient(circle, rgba(26, 58, 82, 0.1) 0%, transparent 70%);
   border-radius: 50%;
   pointer-events: none;
@@ -169,7 +207,7 @@ button {
 
 /* Sidebar */
 .sidebar {
-  width: 260px;
+  width: clamp(200px, 18vw, 260px);
   background: linear-gradient(180deg, #1a3a52 0%, #2e5266 100%);
   color: white;
   display: flex;
@@ -366,13 +404,29 @@ button {
 }
 
 .participant-sidebar {
-  width: 260px;
+  width: clamp(200px, 18vw, 260px);
   background: linear-gradient(180deg, #1a3a52 0%, #2e5266 100%);
   color: white;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   padding: 2rem 1rem;
+}
+
+/* make participant sidebar collapsible on small screens */
+.participant-sidebar {
+  transform: translateX(-110%);
+  transition: transform 280ms cubic-bezier(.2,.8,.2,1), box-shadow 280ms;
+}
+.participant-sidebar.sidebar--open {
+  transform: translateX(0);
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  width: min(85vw, 320px);
+  z-index: 1300;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
 }
 
 .participant-sidebar ul {
@@ -397,6 +451,92 @@ button {
 .participant-content {
   flex: 1;
   padding: 2rem;
+}
+
+/* Sidebar slide-in/out and overlay for admin (mobile-first) */
+.hamburger-btn {
+  position: fixed;
+  left: 12px;
+  top: 12px;
+  z-index: 1400;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background: #c41e3a;
+  color: #fff;
+  cursor: pointer;
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  width: min(85vw, 320px);
+  transform: translateX(-110%);
+  transition: transform 280ms cubic-bezier(.2,.8,.2,1), box-shadow 280ms;
+  z-index: 1200;
+}
+
+.sidebar--open {
+  transform: translateX(0);
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  width: min(85vw, 320px);
+  z-index: 1300;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 1250;
+  opacity: 1;
+  transition: opacity 240ms ease;
+}
+
+/* On larger screens behave like original layout: show sidebar inline and hide hamburger */
+@media (min-width: 900px) {
+  /* Keep hamburger available on wide screens and do not force the sidebar inline.
+     The sidebar will open as an overlay only when the hamburger is toggled. */
+  .hamburger-btn { display: inline-flex; }
+  .sidebar { transform: translateX(-110%); }
+  .participant-sidebar { transform: translateX(-110%); }
+  .sidebar-overlay { display: none; }
+}
+
+/* Desktop: nudge the logout button higher inside an open (inline) sidebar */
+@media (min-width: 900px) {
+  .sidebar.sidebar--open .logout,
+  .participant-sidebar.sidebar--open .logout-btn {
+    position: relative !important;
+    bottom: 80px !important; /* move up on desktop */
+    width: calc(100% - 32px) !important;
+    left: 16px !important;
+    right: 16px !important;
+    box-sizing: border-box !important;
+    margin: 0 auto !important;
+  }
+}
+
+/* Hide sidebar internal content when sidebar is closed to prevent peeking */
+.sidebar:not(.sidebar--open),
+.participant-sidebar:not(.sidebar--open) {
+  transform: translateX(-110%) !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+.sidebar--open,
+.participant-sidebar.sidebar--open {
+  visibility: visible !important;
+  pointer-events: auto !important;
 }
 
 .card-list {
@@ -1007,4 +1147,71 @@ button {
 @media (max-width: 480px) {
   .stats p { font-size: 1.8rem; }
   .form-card input, .primary-btn, .certificate-btn { font-size: 0.95rem; }
+}
+
+/* Ensure sidebar sits above page content when opened and is visible
+   - These rules reinforce the transform and z-index so toggling works
+     even if other stylesheet blocks exist earlier in the file. */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  width: min(85vw, 320px);
+  transform: translateX(-110%);
+  transition: transform 280ms cubic-bezier(.2,.8,.2,1), box-shadow 280ms;
+  z-index: 1200;
+}
+
+.sidebar--open {
+  transform: translateX(0) !important;
+  z-index: 2000 !important;
+  position: fixed !important;
+  left: 0 !important;
+  top: 0 !important;
+  height: 100vh !important;
+  width: min(85vw, 320px) !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+
+/* When sidebar is open (overlay), anchor logout button so it's always visible */
+.sidebar--open .logout,
+.participant-sidebar.sidebar--open .logout-btn {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 32px; /* keep inside overlay on mobile */
+  width: calc(100% - 32px);
+  box-sizing: border-box;
+  margin: 0;
+  z-index: 2100;
+}
+
+/* When the sidebar overlay is open, center the menu vertically and keep items narrower */
+.sidebar--open,
+.participant-sidebar.sidebar--open {
+  display: flex !important;
+  flex-direction: column;
+}
+.sidebar--open ul,
+.participant-sidebar.sidebar--open ul {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; /* align items toward top of overlay */
+  padding-top: 60px; /* push menu a bit down from top so it's higher than center */
+  padding-left: 0;
+  padding-right: 0;
+}
+.sidebar--open ul li,
+.participant-sidebar.sidebar--open ul li {
+  width: calc(100% - 48px);
+  max-width: 260px;
+  margin: 0.6rem auto;
+  border-radius: 8px;
+}
+
+.sidebar-overlay {
+  display: block;
+  z-index: 1990;
 }

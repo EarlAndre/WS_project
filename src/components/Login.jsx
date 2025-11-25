@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import "../App.css";
 
 function Login({ onLogin }) {
@@ -151,18 +152,8 @@ function Login({ onLogin }) {
           {isLoading ? "Signing in..." : "Sign In"}
         </button>
 
-        <div style={{ marginTop: "1.5rem", paddingTop: "1.5rem", borderTop: "1px solid #e0e0e0" }}>
-          <p style={{ color: "#666", fontSize: "0.9rem", marginBottom: "0.8rem", fontWeight: "600" }}>Demo Credentials:</p>
-          <div style={{
-            background: "#f5f5f5",
-            padding: "0.8rem",
-            borderRadius: "8px",
-            fontSize: "0.85rem",
-            lineHeight: "1.6"
-          }}>
-            <p><strong>Admin:</strong> admin / admin123</p>
-            <p><strong>Participant:</strong> participant / part123</p>
-          </div>
+        <div style={{ marginTop: "1rem", textAlign: "center" }}>
+          <small>Don't have an account? <Link to="/register">Create one</Link></small>
         </div>
       </form>
     </div>

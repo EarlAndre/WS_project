@@ -3,13 +3,15 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import "../App.css";
 import Evaluation from "./Evalution.jsx";
-import { fetchSeminars as dbFetchSeminars, saveJoinedParticipant } from "../lib/db";
+import { fetchSeminars as dbFetchSeminars, saveJoinedParticipant, checkInParticipant } from "../lib/db";
+import HamburgerToggle from './HamburgerToggle';
 
 function ParticipantDashboard({ onLogout }) {
   const [activeSection, setActiveSection] = useState("seminars");
   const [joinedSeminars, setJoinedSeminars] = useState([]);
   const [availableSeminars, setAvailableSeminars] = useState([]);
   const [completedEvaluations, setCompletedEvaluations] = useState([]);
+  const [showSidebar, setShowSidebar] = useState(false);
 
   // 🧾 Load seminars and joined status (prefer Supabase, fallback to localStorage)
   useEffect(() => {
@@ -96,23 +98,41 @@ function ParticipantDashboard({ onLogout }) {
       const res = await saveJoinedParticipant(seminarId, { participant_email, participant_name });
       if (res.error) {
         console.warn('Failed to save joined participant to Supabase:', res.error);
-        alert('Join saved locally but failed to persist to Supabase. Check console for details.');
+        window.dispatchEvent(new CustomEvent('app-banner', { detail: 'Join saved locally but failed to persist to Supabase. Check console for details.' }));
       } else {
         console.log('Joined participant saved to Supabase:', res.data);
-        alert('Joined and saved to Supabase.');
+        window.dispatchEvent(new CustomEvent('app-banner', { detail: 'Joined and saved to Supabase.' }));
       }
     } catch (err) {
       console.warn('Unexpected error saving joined participant:', err);
-      alert('Join saved locally but unexpected error when saving to Supabase. Check console.');
+      window.dispatchEvent(new CustomEvent('app-banner', { detail: 'Join saved locally but unexpected error when saving to Supabase. Check console.' }));
     }
   };
 
-  const handleMarkAttendance = (title) => {
+  const handleMarkAttendance = async (title) => {
+    // mark locally
     const updated = joinedSeminars.map((s) =>
       s.title === title ? { ...s, completed: true } : s
     );
     setJoinedSeminars(updated);
     localStorage.setItem("joinedSeminars", JSON.stringify(updated));
+
+    // Try to persist attendance to Supabase
+    try {
+      const seminar = joinedSeminars.find((s) => s.title === title);
+      if (!seminar) return;
+      const seminarId = seminar.id || null;
+      const participant_email = localStorage.getItem('participantEmail') || localStorage.getItem('userEmail') || 'participant@example.com';
+      const res = await checkInParticipant(seminarId, participant_email);
+      if (res.error) {
+        console.warn('Failed to persist attendance to Supabase:', res.error);
+        window.dispatchEvent(new CustomEvent('app-banner', { detail: 'Attendance marked locally but failed to persist to Supabase.' }));
+      } else {
+        console.log('Attendance persisted to Supabase:', res.data);
+      }
+    } catch (err) {
+      console.warn('Unexpected error while persisting attendance:', err);
+    }
   };
 
   const handleDeleteAttendance = (title) => {
@@ -132,7 +152,19 @@ function ParticipantDashboard({ onLogout }) {
     certDiv.style.position = "relative";
     certDiv.style.fontFamily = "'Georgia', 'Garamond', serif";
     certDiv.style.color = "#1a3a52";
-    certDiv.style.background = "linear-gradient(135deg, #ffffff 0%, #f5f7fa 100%)";
+    // Apply custom certificate background if participant set one (color or image URL)
+    const certBg = localStorage.getItem(`certBg:${seminar.id}`) || localStorage.getItem('certificateBackground');
+    if (certBg) {
+      if (certBg.startsWith('#') || certBg.startsWith('rgb')) {
+        certDiv.style.background = certBg;
+      } else {
+        certDiv.style.backgroundImage = `url('${certBg}')`;
+        certDiv.style.backgroundSize = 'cover';
+        certDiv.style.backgroundPosition = 'center';
+      }
+    } else {
+      certDiv.style.background = "linear-gradient(135deg, #ffffff 0%, #f5f7fa 100%)";
+    }
     certDiv.style.border = "4px solid #c41e3a";
     certDiv.style.borderRadius = "4px";
     certDiv.style.boxShadow = "0 10px 40px rgba(0,0,0,0.1)";
@@ -231,6 +263,10 @@ function ParticipantDashboard({ onLogout }) {
         <div style="position: absolute; top: 15px; right: 15px; width: 30px; height: 30px; border-top: 3px solid #c41e3a; border-right: 3px solid #c41e3a;"></div>
         <div style="position: absolute; bottom: 15px; left: 15px; width: 30px; height: 30px; border-bottom: 3px solid #c41e3a; border-left: 3px solid #c41e3a;"></div>
         <div style="position: absolute; bottom: 15px; right: 15px; width: 30px; height: 30px; border-bottom: 3px solid #c41e3a; border-right: 3px solid #c41e3a;"></div>
+        <!-- Bottom-right watermark text -->
+        <div style="position: absolute; bottom: 24px; right: 24px; opacity: 0.12; color: #1a3a52; font-size: 18px; transform: rotate(-10deg);">
+          Masking Unsa.
+        </div>
       </div>
     `;
 
@@ -314,7 +350,7 @@ function ParticipantDashboard({ onLogout }) {
                       </span>
                     </div>
                     
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1.5rem", marginBottom: "1.5rem", paddingBottom: "1.5rem", borderBottom: "1px solid #f0f0f0" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.5rem", marginBottom: "1.5rem", paddingBottom: "1.5rem", borderBottom: "1px solid #f0f0f0" }}>
                       <div>
                         <p style={{ margin: "0 0 0.3rem 0", color: "#999", fontSize: "0.85rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.3px" }}>
                           Date
@@ -465,7 +501,7 @@ function ParticipantDashboard({ onLogout }) {
                       </span>
                     </div>
                     
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", marginBottom: "1.5rem", paddingBottom: "1.5rem", borderBottom: "1px solid #f0f0f0" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1.5rem", marginBottom: "1.5rem", paddingBottom: "1.5rem", borderBottom: "1px solid #f0f0f0" }}>
                       <div>
                         <p style={{ margin: "0 0 0.3rem 0", color: "#999", fontSize: "0.85rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.3px" }}>
                           Date
@@ -484,7 +520,7 @@ function ParticipantDashboard({ onLogout }) {
                       </div>
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "1rem" }}>
                       {s.completed ? (
                         <div style={{
                           padding: "0.75rem",
@@ -666,21 +702,25 @@ function ParticipantDashboard({ onLogout }) {
 
   return (
     <div className="participant-layout">
-      <aside className="participant-sidebar">
+      <aside id="participant-sidebar" className={`participant-sidebar ${showSidebar ? 'sidebar--open' : ''}`} role="navigation" aria-label="Participant sidebar">
         <div className="sidebar-header" style={{ textAlign: "center", paddingBottom: "1.5rem", borderBottom: "2px solid rgba(255, 255, 255, 0.2)" }}>
           <img src="/logo.png" alt="Logo" style={{ width: "50px", height: "50px", marginBottom: "0.8rem" }} />
           <h2 style={{ margin: 0, fontSize: "1.3rem", fontWeight: "700" }}>Participant</h2>
           <p style={{ margin: "0.3rem 0 0 0", fontSize: "0.85rem", opacity: 0.9 }}>Seminar System</p>
         </div>
         <ul>
-          <li className={activeSection === "seminars" ? "active" : ""} onClick={() => setActiveSection("seminars")} style={{ cursor: "pointer" }}>Available Seminars</li>
-          <li className={activeSection === "attendance" ? "active" : ""} onClick={() => setActiveSection("attendance")} style={{ cursor: "pointer" }}>Attendance</li>
-          <li className={activeSection === "certificates" ? "active" : ""} onClick={() => setActiveSection("certificates")} style={{ cursor: "pointer" }}>Certificates</li>
-          <li className={activeSection === "evaluation" ? "active" : ""} onClick={() => setActiveSection("evaluation")} style={{ cursor: "pointer" }}>Evaluations</li>
+          <li className={activeSection === "seminars" ? "active" : ""} onClick={() => { setActiveSection("seminars"); setShowSidebar(false); }} style={{ cursor: "pointer" }}>Available Seminars</li>
+          <li className={activeSection === "attendance" ? "active" : ""} onClick={() => { setActiveSection("attendance"); setShowSidebar(false); }} style={{ cursor: "pointer" }}>Attendance</li>
+          <li className={activeSection === "certificates" ? "active" : ""} onClick={() => { setActiveSection("certificates"); setShowSidebar(false); }} style={{ cursor: "pointer" }}>Certificates</li>
+          <li className={activeSection === "evaluation" ? "active" : ""} onClick={() => { setActiveSection("evaluation"); setShowSidebar(false); }} style={{ cursor: "pointer" }}>Evaluations</li>
         </ul>
         <button className="logout-btn" onClick={onLogout}>Logout</button>
       </aside>
-      <main className="participant-content">{renderContent()}</main>
+      <main className="participant-content">
+        <HamburgerToggle isOpen={showSidebar} onToggle={() => setShowSidebar(s => !s)} controlsId="participant-sidebar" />
+        {showSidebar && <div className="sidebar-overlay" onClick={() => setShowSidebar(false)} aria-hidden="true"></div>}
+        {renderContent()}
+      </main>
     </div>
   );
 }

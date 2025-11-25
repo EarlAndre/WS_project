@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../App.css";
+import { createSeminar as dbCreateSeminar } from "../lib/db";
 
 function CreateSeminar({ onLogout }) {
   const navigate = useNavigate();
@@ -11,21 +12,96 @@ function CreateSeminar({ onLogout }) {
     participants: "",
   });
 
+  // time fields: hour (1-12), minute, period (AM/PM)
+  const [time, setTime] = useState({ hour: "9", minute: "00", period: "AM" });
+  const [endTime, setEndTime] = useState({ hour: "11", minute: "00", period: "AM" });
+
   const handleChange = (e) => {
     setSeminar({ ...seminar, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleTimeChange = (e) => {
+    setTime({ ...time, [e.target.name]: e.target.value });
+  };
+  const handleEndTimeChange = (e) => {
+    setEndTime({ ...endTime, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!seminar.title || !seminar.duration || !seminar.speaker || !seminar.participants) {
-      alert("Please fill out all fields.");
+      window.dispatchEvent(new CustomEvent('app-banner', { detail: "Please fill out all required fields (title, duration, speaker, participants)." }));
       return;
     }
-    const seminars = JSON.parse(localStorage.getItem("seminars")) || [];
-    seminars.push(seminar);
-    localStorage.setItem("seminars", JSON.stringify(seminars));
-    alert("✅ Seminar created successfully!");
+
+    // validate date and time
+    if (!seminar.date) {
+      if (!confirm('No date selected. Continue without a date?')) return;
+    }
+
+    // ensure time fields are present and valid (start and end)
+    const hourNum = parseInt(time.hour, 10);
+    const endHourNum = parseInt(endTime.hour, 10);
+    const validMinutes = ['00', '15', '30', '45'];
+    if (!time.hour || !time.minute || !time.period || isNaN(hourNum) || hourNum < 1 || hourNum > 12 || !validMinutes.includes(time.minute) || !(time.period === 'AM' || time.period === 'PM')) {
+      window.dispatchEvent(new CustomEvent('app-banner', { detail: 'Please select a valid start time (hour 1-12, minute 00/15/30/45, AM/PM).' }));
+      return;
+    }
+    if (!endTime.hour || !endTime.minute || !endTime.period || isNaN(endHourNum) || endHourNum < 1 || endHourNum > 12 || !validMinutes.includes(endTime.minute) || !(endTime.period === 'AM' || endTime.period === 'PM')) {
+      window.dispatchEvent(new CustomEvent('app-banner', { detail: 'Please select a valid end time (hour 1-12, minute 00/15/30/45, AM/PM).' }));
+      return;
+    }
+
+    // convert to minutes since midnight for comparison
+    const toMinutes = (t) => {
+      let h = parseInt(t.hour, 10) % 12;
+      if (t.period === 'PM') h += 12;
+      return h * 60 + parseInt(t.minute, 10);
+    };
+    const startMinutes = toMinutes(time);
+    const finishMinutes = toMinutes(endTime);
+    if (finishMinutes <= startMinutes) {
+      window.dispatchEvent(new CustomEvent('app-banner', { detail: 'End time must be after start time.' }));
+      return;
+    }
+    // prepare strings for saving
+    const startString = `${time.hour.padStart(2,'0')}:${time.minute} ${time.period}`;
+    const endString = `${endTime.hour.padStart(2,'0')}:${endTime.minute} ${endTime.period}`;
+    // Try to persist to Supabase first
+    try {
+      const { data, error } = await dbCreateSeminar({
+        title: seminar.title,
+        duration: seminar.duration,
+        speaker: seminar.speaker,
+        participants: seminar.participants,
+        date: seminar.date || null,
+        start_time: startString,
+        end_time: endString,
+      });
+
+      if (error) {
+        // fallback to localStorage
+        const seminars = JSON.parse(localStorage.getItem("seminars")) || [];
+        seminars.push({ ...seminar, start_time: startString, end_time: endString });
+        localStorage.setItem("seminars", JSON.stringify(seminars));
+        window.dispatchEvent(new CustomEvent('app-banner', { detail: "Seminar saved locally (supabase error)." }));
+      } else {
+        const created = Array.isArray(data) && data[0] ? data[0] : null;
+        const seminars = JSON.parse(localStorage.getItem("seminars")) || [];
+        seminars.push(created || { ...seminar, start_time: startString, end_time: endString });
+        localStorage.setItem("seminars", JSON.stringify(seminars));
+        window.dispatchEvent(new CustomEvent('app-banner', { detail: "✅ Seminar created successfully!" }));
+      }
+    } catch (err) {
+      const seminars = JSON.parse(localStorage.getItem("seminars")) || [];
+      seminars.push({ ...seminar, start_time: startString, end_time: endString });
+      localStorage.setItem("seminars", JSON.stringify(seminars));
+      window.dispatchEvent(new CustomEvent('app-banner', { detail: "Seminar saved locally (unexpected error)." }));
+    }
+
     setSeminar({ title: "", duration: "", speaker: "", participants: "" });
+    setTime({ hour: "9", minute: "00", period: "AM" });
+    setEndTime({ hour: "11", minute: "00", period: "AM" });
     navigate("/admin");
   };
 
@@ -142,6 +218,67 @@ function CreateSeminar({ onLogout }) {
                   onFocus={(e) => e.target.style.borderColor = "#c41e3a"}
                   onBlur={(e) => e.target.style.borderColor = "#e0e0e0"}
                 />
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+              <div>
+                <label style={{ fontWeight: "600", color: "#1a3a52", display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                  <span>📅</span> Date
+                </label>
+                <input
+                  type="date"
+                  name="date"
+                  value={seminar.date || ""}
+                  onChange={handleChange}
+                  style={{
+                    width: "100%",
+                    padding: "0.95rem",
+                    border: "2px solid #e0e0e0",
+                    borderRadius: "10px",
+                    fontSize: "1rem",
+                    boxSizing: "border-box"
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontWeight: "600", color: "#1a3a52", display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                  <span>🕒</span> Start Time
+                </label>
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <select name="hour" value={time.hour} onChange={handleTimeChange} style={{ padding: "0.75rem", borderRadius: 8, border: "2px solid #e0e0e0", fontSize: "1rem", minWidth: 80 }}>
+                    {Array.from({ length: 12 }, (_, i) => String(i + 1)).map(h => (
+                      <option key={h} value={h}>{h}</option>
+                    ))}
+                  </select>
+                  <select name="minute" value={time.minute} onChange={handleTimeChange} style={{ padding: "0.75rem", borderRadius: 8, border: "2px solid #e0e0e0", fontSize: "1rem", minWidth: 80 }}>
+                    {['00','15','30','45'].map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                  <select name="period" value={time.period} onChange={handleTimeChange} style={{ padding: "0.75rem", borderRadius: 8, border: "2px solid #e0e0e0", fontSize: "1rem", minWidth: 90 }}>
+                    <option>AM</option>
+                    <option>PM</option>
+                  </select>
+                </div>
+                <div style={{ marginTop: 12 }}>
+                  <label style={{ fontWeight: "600", color: "#1a3a52", display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                    <span>⏳</span> End Time
+                  </label>
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <select name="hour" value={endTime.hour} onChange={handleEndTimeChange} style={{ padding: "0.75rem", borderRadius: 8, border: "2px solid #e0e0e0", fontSize: "1rem", minWidth: 80 }}>
+                      {Array.from({ length: 12 }, (_, i) => String(i + 1)).map(h => (
+                        <option key={h} value={h}>{h}</option>
+                      ))}
+                    </select>
+                    <select name="minute" value={endTime.minute} onChange={handleEndTimeChange} style={{ padding: "0.75rem", borderRadius: 8, border: "2px solid #e0e0e0", fontSize: "1rem", minWidth: 80 }}>
+                      {['00','15','30','45'].map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                    <select name="period" value={endTime.period} onChange={handleEndTimeChange} style={{ padding: "0.75rem", borderRadius: 8, border: "2px solid #e0e0e0", fontSize: "1rem", minWidth: 90 }}>
+                      <option>AM</option>
+                      <option>PM</option>
+                    </select>
+                  </div>
+                </div>
               </div>
             </div>
 

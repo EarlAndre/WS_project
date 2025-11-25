@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "../App.css";
-import { saveEvaluation } from "../lib/db";
+import { saveEvaluation, fetchEvaluations } from "../lib/db";
 
 function Evaluation() {
   const [seminars, setSeminars] = useState([]);
@@ -68,14 +68,34 @@ function Evaluation() {
   };
 
   const handleSubmit = async () => {
-    alert("Evaluation submitted successfully!");
-    const allEvaluations = JSON.parse(localStorage.getItem("evaluations") || "{}");
+    const participant_email = localStorage.getItem('participantEmail') || 'participant@example.com';
+
+    // Prevent duplicate evaluation: check localStorage first
     const completedEvaluations = JSON.parse(localStorage.getItem("completedEvaluations") || "[]");
-    
+    if (completedEvaluations.includes(selectedSeminar.title)) {
+      window.dispatchEvent(new CustomEvent('app-banner', { detail: 'You have already submitted an evaluation for this seminar.' }));
+      return;
+    }
+
+    // Also check DB to be safe
+    try {
+      const seminarId = selectedSeminar.id || null;
+      const res = await fetchEvaluations(seminarId, participant_email);
+      if (res && res.data && res.data.length > 0) {
+        window.dispatchEvent(new CustomEvent('app-banner', { detail: 'You have already submitted an evaluation for this seminar.' }));
+        return;
+      }
+    } catch (err) {
+      console.warn('Error checking existing evaluations:', err);
+    }
+
+    window.dispatchEvent(new CustomEvent('app-banner', { detail: "Evaluation submitted successfully!" }));
+    const allEvaluations = JSON.parse(localStorage.getItem("evaluations") || "{}");
+
     // Save evaluation answers locally
     allEvaluations[selectedSeminar.title] = answers;
     localStorage.setItem("evaluations", JSON.stringify(allEvaluations));
-    
+
     // Track that evaluation is completed for this seminar locally
     if (!completedEvaluations.includes(selectedSeminar.title)) {
       completedEvaluations.push(selectedSeminar.title);
@@ -84,14 +104,17 @@ function Evaluation() {
 
     // Try to persist evaluation to Supabase
     try {
-      const participant_email = localStorage.getItem('participantEmail') || 'participant@example.com';
       const seminarId = selectedSeminar.id || null;
-      const { data, error } = await saveEvaluation(seminarId, participant_email, answers);
-      if (error) {
-        console.warn('Failed to save evaluation to Supabase:', error.message || error);
+      const res = await saveEvaluation(seminarId, participant_email, answers);
+      if (res.error) {
+        console.warn('Failed to save evaluation to Supabase:', res.error);
+        window.dispatchEvent(new CustomEvent('app-banner', { detail: 'Evaluation saved locally but failed to persist to Supabase.' }));
+      } else {
+        console.log('Evaluation saved to Supabase:', res.data);
       }
     } catch (err) {
       console.warn('Unexpected error saving evaluation:', err);
+      window.dispatchEvent(new CustomEvent('app-banner', { detail: 'Evaluation saved locally but unexpected error when saving to Supabase.' }));
     }
 
     setSelectedSeminar(null);

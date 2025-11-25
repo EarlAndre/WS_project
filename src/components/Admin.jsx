@@ -2,11 +2,13 @@
   import Calendar from "react-calendar";
   import "react-calendar/dist/Calendar.css";
   import "../App.css";
-  import { fetchSeminars, createSeminar as dbCreateSeminar, deleteSeminar as dbDeleteSeminar } from "../lib/db";
+  import { fetchSeminars, createSeminar as dbCreateSeminar, upsertSeminar as dbUpsertSeminar, deleteSeminar as dbDeleteSeminar, fetchJoinedParticipants, saveJoinedParticipant, saveEvaluation, saveAllSeminars } from "../lib/db";
+  import HamburgerToggle from './HamburgerToggle';
 
   function Admin({ onLogout }) {
     const [activeTab, setActiveTab] = useState("dashboard");
     const [seminars, setSeminars] = useState([]);
+    const [showSidebar, setShowSidebar] = useState(false);
 
     const [title, setTitle] = useState("");
     const [duration, setDuration] = useState("");
@@ -53,7 +55,7 @@
     const handleCreateSeminar = async (e) => {
       e.preventDefault();
       if (!title || !duration || !speaker || !participants || !date) {
-        alert("Please fill out all fields.");
+        window.dispatchEvent(new CustomEvent('app-banner', { detail: "Please fill out all fields." }));
         return;
       }
 
@@ -84,36 +86,66 @@
           } // Default evaluation questions
         ]
       };
-
         // Try to persist to Supabase first
         try {
-          const { data, error } = await dbCreateSeminar(newSeminar);
-          if (error) {
-            // fallback to local storage
-            const updated = [...seminars, newSeminar];
-            setSeminars(updated);
-            localStorage.setItem("seminars", JSON.stringify(updated));
-            alert("Seminar saved locally (supabase error).");
+          if (isEditing && editingId) {
+            const payload = { ...newSeminar, id: editingId };
+            const { data, error } = await dbUpsertSeminar(payload);
+            if (error) {
+              const updated = seminars.map(s => s.id === editingId ? payload : s);
+              setSeminars(updated);
+              localStorage.setItem("seminars", JSON.stringify(updated));
+              window.dispatchEvent(new CustomEvent('app-banner', { detail: "Seminar updated locally (supabase error)." }));
+            } else {
+              const updatedRow = data && data[0] ? data[0] : payload;
+              const updated = seminars.map(s => s.id === editingId ? updatedRow : s);
+              setSeminars(updated);
+              localStorage.setItem("seminars", JSON.stringify(updated));
+              setTitle(""); setDuration(""); setSpeaker(""); setParticipants(""); setDate("");
+              setIsEditing(false); setEditingId(null);
+              setActiveTab('list');
+              window.dispatchEvent(new CustomEvent('app-banner', { detail: "Seminar updated successfully!" }));
+            }
           } else {
-            // data is an array with inserted row
-            const created = data && data[0] ? data[0] : newSeminar;
-            const updated = [...seminars, created];
-            setSeminars(updated);
-            localStorage.setItem("seminars", JSON.stringify(updated));
-            setTitle("");
-            setDuration("");
-            setSpeaker("");
-            setParticipants("");
-            setDate("");
-            alert("Seminar created successfully!");
+            const { data, error } = await dbCreateSeminar(newSeminar);
+            if (error) {
+              // fallback to local storage
+              const updated = [...seminars, newSeminar];
+              setSeminars(updated);
+              localStorage.setItem("seminars", JSON.stringify(updated));
+              window.dispatchEvent(new CustomEvent('app-banner', { detail: "Seminar saved locally (supabase error)." }));
+            } else {
+              // data is an array with inserted row
+              const created = data && data[0] ? data[0] : newSeminar;
+              const updated = [...seminars, created];
+              setSeminars(updated);
+              localStorage.setItem("seminars", JSON.stringify(updated));
+              setTitle("");
+              setDuration("");
+              setSpeaker("");
+              setParticipants("");
+              setDate("");
+              window.dispatchEvent(new CustomEvent('app-banner', { detail: "Seminar created successfully!" }));
+            }
           }
         } catch (err) {
           const updated = [...seminars, newSeminar];
           setSeminars(updated);
           localStorage.setItem("seminars", JSON.stringify(updated));
-          alert("Seminar saved locally (unexpected error).");
+          window.dispatchEvent(new CustomEvent('app-banner', { detail: "Seminar saved locally (unexpected error)." }));
         }
     };
+
+      const handleEdit = (seminar) => {
+        setIsEditing(true);
+        setEditingId(seminar.id || null);
+        setTitle(seminar.title || "");
+        setDuration(seminar.duration || "");
+        setSpeaker(seminar.speaker || "");
+        setParticipants(seminar.participants || "");
+        setDate(seminar.date ? seminar.date.split('T')[0] : seminar.date || "");
+        setActiveTab('create');
+      };
 
     const handleDelete = async (index) => {
       const sem = seminars[index];
@@ -135,17 +167,62 @@
       }
     };
 
-    // Get joined participants from localStorage
-    const getJoinedCount = (title) => {
+    const [joinCounts, setJoinCounts] = React.useState({});
+
+    // Get joined participants from DB if possible, fallback to localStorage
+    const getJoinedCount = (seminar) => {
+      if (!seminar) return 0;
+      if (seminar.id && joinCounts[seminar.id] != null) return joinCounts[seminar.id];
+      // fallback by title
       const joined = JSON.parse(localStorage.getItem("joinedSeminars")) || [];
-      return joined.filter(s => s.title === title).length;
+      return joined.filter(s => s.title === (seminar.title || '')).length;
     };
+
+    // Load counts whenever seminars change
+    useEffect(() => {
+      let mounted = true;
+      async function loadCounts() {
+        const map = {};
+        for (const s of seminars) {
+          if (s && s.id) {
+            try {
+              const { data, error } = await fetchJoinedParticipants(s.id);
+              if (!error && data) {
+                map[s.id] = data.length;
+              } else {
+                map[s.id] = 0;
+              }
+            } catch (err) {
+              console.warn('Error fetching joined participants for', s.id, err);
+              map[s.id] = 0;
+            }
+          } else {
+            map[s.id] = 0;
+          }
+        }
+        if (mounted) setJoinCounts(map);
+      }
+      if (seminars && seminars.length) loadCounts();
+      return () => { mounted = false; };
+    }, [seminars]);
 
     return (
       <div className="admin-dashboard">
-        {/* Sidebar */}
-        <aside className="sidebar">
+        {/* Hamburger toggle button */}
+        {/* Hamburger toggle component */}
+        <HamburgerToggle isOpen={showSidebar} onToggle={() => setShowSidebar(s => !s)} controlsId="admin-sidebar" />
+
+        {/* Sidebar (collapsible) */}
+        {/* overlay (dim background) */}
+        {showSidebar && (
+          <div className="sidebar-overlay" onClick={() => setShowSidebar(false)} aria-hidden="true"></div>
+        )}
+
+        <aside id="admin-sidebar" className={`sidebar ${showSidebar ? 'sidebar--open' : ''}`} role="navigation" aria-label="Admin sidebar">
           <div style={{ textAlign: "center", marginBottom: "1.5rem", paddingBottom: "1.5rem", borderBottom: "2px solid rgba(255, 255, 255, 0.2)" }}>
+            {showSidebar && (
+              <button onClick={() => setShowSidebar(false)} style={{ position: 'absolute', right: 12, top: 12, border: 'none', background: 'none', color: '#fff', cursor: 'pointer' }}>✕</button>
+            )}
             <img src="/logo.png" alt="Logo" style={{ width: "60px", height: "60px", marginBottom: "0.8rem" }} />
             <h2 className="logo" style={{ margin: 0, fontSize: "1.3rem", color: "#ffffff", fontWeight: "700" }}>VPAA System</h2>
           </div>
@@ -173,6 +250,8 @@
               </p>
             </div>
           </header>
+
+          {/* sync button removed */}
 
           {/* Dashboard Overview */}
           {activeTab === "dashboard" && (
@@ -240,7 +319,7 @@
                 }}></div>
                 <h3 style={{ color: "#1a3a52", position: "relative" }}>Joined</h3>
                 <p style={{ fontSize: "3rem", margin: "0.5rem 0", position: "relative", color: "#c41e3a" }}>
-                  {seminars.reduce((total, s) => total + getJoinedCount(s.title), 0)}
+                  {seminars.reduce((total, s) => total + getJoinedCount(s), 0)}
                 </p>
                 <p style={{ fontSize: "0.85rem", color: "#666", margin: 0, position: "relative" }}>
                   total participants
@@ -449,7 +528,7 @@
                         fontSize: "0.85rem",
                         fontWeight: "600"
                       }}>
-                        {getJoinedCount(s.title)}/{s.participants} joined
+                        {getJoinedCount(s)}/{s.participants} joined
                       </div>
 
                       <h3 style={{
@@ -481,6 +560,34 @@
                           {s.participants} max
                         </p>
                       </div>
+
+                      <button 
+                        onClick={() => handleEdit(s)}
+                        style={{
+                          width: "100%",
+                          padding: "0.8rem",
+                          background: "#ffffff",
+                          border: "2px solid #e0e0e0",
+                          borderRadius: "10px",
+                          color: "#1a3a52",
+                          fontWeight: "600",
+                          cursor: "pointer",
+                          transition: "all 0.3s",
+                          marginBottom: "0.5rem"
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.background = "#1a3a52";
+                          e.currentTarget.style.color = "white";
+                          e.currentTarget.style.borderColor = "#1a3a52";
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.background = "#ffffff";
+                          e.currentTarget.style.color = "#1a3a52";
+                          e.currentTarget.style.borderColor = "#e0e0e0";
+                        }}
+                      >
+                        Edit Seminar
+                      </button>
 
                       <button 
                         onClick={() => {
