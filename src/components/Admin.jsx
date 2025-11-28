@@ -604,20 +604,6 @@
                         fontWeight: "600"
                       }}>
                         {getJoinedCount(s)}/{s.participants} joined
-                        <button
-                        onClick={() => navigate(`/attendance?seminar=${s.id}`)}
-                        style={{
-                          marginTop: "1rem",
-                          padding: "0.5rem 1rem",
-                          background: "#007bff",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "8px",
-                          cursor: "pointer"
-                        }}
-                      >
-                        Open Scanner for Attendance
-                      </button>
 
                       </div>
 
