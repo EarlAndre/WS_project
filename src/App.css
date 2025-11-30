@@ -262,7 +262,10 @@ button {
 /* Main Content */
 .content {
   flex: 1;
-  padding: 2.5rem 2rem;
+  /* add a little extra top padding so the fixed hamburger won't visually overlap
+     the page title. This is a small, safe tweak that preserves the existing
+     layout while preventing the button from covering header text. */
+  padding: 3.25rem 2rem 2rem 2rem;
   overflow-x: hidden;
 }
 
@@ -450,25 +453,41 @@ button {
 
 .participant-content {
   flex: 1;
-  padding: 2rem;
+  /* slightly reduce participant content padding to tighten layout without
+     making drastic appearance changes */
+  padding: 1.5rem;
 }
 
 /* Sidebar slide-in/out and overlay for admin (mobile-first) */
 .hamburger-btn {
   position: fixed;
   left: 12px;
-  top: 12px;
+  /* nudge down a little so it doesn't cover heading text */
+  top: 18px;
   z-index: 1400;
-  padding: 10px;
+  padding: 8px 9px;
   border-radius: 8px;
   border: none;
   background: #c41e3a;
   color: #fff;
   cursor: pointer;
-  font-size: 18px;
+  font-size: 16px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+/* When hamburger is placed in the page header, let it flow inline with the title
+   so it never overlaps. This keeps mobile behavior (fixed button) intact while
+   making the desktop/header placement natural. */
+.content-header .hamburger-btn {
+  position: relative;
+  top: 0;
+  left: 0;
+  margin: 0;
+  padding: 6px 8px;
+  font-size: 23px;
+  box-shadow: none;
 }
 
 .sidebar {
@@ -900,16 +919,16 @@ button {
   margin-top: auto;
 }
 
-/* Fade-in animation for evaluation form */
+/* Fade-in (no slide) — only fades, no translate/slide movement */
 .fade-in {
   opacity: 0;
-  transform: translateY(20px);
-  transition: opacity 0.6s ease, transform 0.6s ease;
+  transition: opacity 0.35s ease;
+  transform: none;
 }
 
 .fade-in.visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: none;
 }
 
 /* Circular progress animation */

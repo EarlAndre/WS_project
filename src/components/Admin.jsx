@@ -670,9 +670,7 @@
 
     return (
       <div className="admin-dashboard">
-        {/* Hamburger toggle button */}
-        {/* Hamburger toggle component */}
-        <HamburgerToggle isOpen={showSidebar} onToggle={() => setShowSidebar(s => !s)} controlsId="admin-sidebar" />
+        {/* Hamburger toggle is rendered in the header so it flows with the title */}
 
         {/* Sidebar (collapsible) */}
         {/* overlay (dim background) */}
@@ -685,7 +683,7 @@
             {showSidebar && (
               <button onClick={() => setShowSidebar(false)} style={{ position: 'absolute', right: 12, top: 12, border: 'none', background: 'none', color: '#fff', cursor: 'pointer' }}>✕</button>
             )}
-            <img src="/logo.svg" alt="Logo" style={{ width: "60px", height: "60px", marginBottom: "0.8rem" }} />
+            <img src="/logo.png" alt="Logo" style={{ width: "150px", height: "150px", marginBottom: "0.8rem" }} />
             <h2 className="logo" style={{ margin: 0, fontSize: "1.3rem", color: "#ffffff", fontWeight: "700" }}>VPAA System</h2>
           </div>
           <ul>
@@ -699,7 +697,9 @@
         {/* Main Content */}
         <main className="content">
           <header className="content-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
-            <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <HamburgerToggle isOpen={showSidebar} onToggle={() => setShowSidebar(s => !s)} controlsId="admin-sidebar" />
+              <div>
               <h1 style={{ margin: 0 }}>
                 {activeTab === "dashboard" && "Admin Dashboard"}
                 {activeTab === "create" && "Create New Seminar"}
@@ -710,6 +710,7 @@
                 {activeTab === "create" && "Create a new seminar and add it to the system"}
                 {activeTab === "list" && "View and manage all seminars"}
               </p>
+            </div>
             </div>
             {activeTab === "dashboard" && (
               <button

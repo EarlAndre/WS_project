@@ -350,14 +350,6 @@ function ParticipantDashboard({ onLogout }) {
       case "seminars":
         return (
           <div className="section-content">
-            <div style={{ marginBottom: "2.5rem" }}>
-              <h2 style={{ margin: "0 0 0.5rem 0", color: "#1a3a52", fontSize: "2rem", fontWeight: "700", letterSpacing: "-0.5px" }}>
-                Available Seminars
-              </h2>
-              <p style={{ margin: 0, color: "#999", fontSize: "0.95rem", fontWeight: "500" }}>
-                {availableSeminars.length} seminar{availableSeminars.length !== 1 ? 's' : ''} available • Browse and join to participate
-              </p>
-            </div>
             {availableSeminars.length === 0 ? (
               <div style={{
                 padding: "3rem 2rem",
@@ -502,14 +494,6 @@ function ParticipantDashboard({ onLogout }) {
       case "attendance":
         return (
           <div className="section-content">
-            <div style={{ marginBottom: "2.5rem" }}>
-              <h2 style={{ margin: "0 0 0.5rem 0", color: "#1a3a52", fontSize: "2rem", fontWeight: "700", letterSpacing: "-0.5px" }}>
-                Attendance
-              </h2>
-              <p style={{ margin: 0, color: "#999", fontSize: "0.95rem", fontWeight: "500" }}>
-                {joinedSeminars.length} seminar{joinedSeminars.length !== 1 ? 's' : ''} joined • Mark your attendance to progress
-              </p>
-            </div>
             {joinedSeminars.length === 0 ? (
               <div style={{
                 padding: "3rem 2rem",
@@ -686,14 +670,6 @@ function ParticipantDashboard({ onLogout }) {
       case "certificates":
         return (
           <div className="section-content">
-            <div style={{ marginBottom: "2rem" }}>
-              <h2 style={{ margin: "0 0 0.5rem 0", color: "#1a3a52", fontSize: "1.8rem", fontWeight: "700" }}>
-                My Certificates
-              </h2>
-              <p style={{ margin: 0, color: "#666", fontSize: "0.9rem" }}>
-                Download your certificates after completing attendance and evaluation
-              </p>
-            </div>
             {joinedSeminars.length === 0 ? (
               <p>No seminars joined yet. Join seminars to be eligible for certificates.</p>
             ) : (
@@ -793,7 +769,7 @@ function ParticipantDashboard({ onLogout }) {
     <div className="participant-layout">
       <aside id="participant-sidebar" className={`participant-sidebar ${showSidebar ? 'sidebar--open' : ''}`} role="navigation" aria-label="Participant sidebar">
         <div className="sidebar-header" style={{ textAlign: "center", paddingBottom: "1.5rem", borderBottom: "2px solid rgba(255, 255, 255, 0.2)" }}>
-          <img src="/logo.svg" alt="Logo" style={{ width: "50px", height: "50px", marginBottom: "0.8rem" }} />
+          <img src="/logo.png" alt="Logo" style={{ width: "150px", height: "150px", marginBottom: "0.8rem" }} />
           <h2 style={{ margin: 0, fontSize: "1.3rem", fontWeight: "700" }}>Participant</h2>
           <p style={{ margin: "0.3rem 0 0 0", fontSize: "0.85rem", opacity: 0.9 }}>Seminar System</p>
         </div>
@@ -806,7 +782,25 @@ function ParticipantDashboard({ onLogout }) {
         <button className="logout-btn" onClick={onLogout}>Logout</button>
       </aside>
       <main className="participant-content">
-        <HamburgerToggle isOpen={showSidebar} onToggle={() => setShowSidebar(s => !s)} controlsId="participant-sidebar" />
+        <header className="content-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <HamburgerToggle isOpen={showSidebar} onToggle={() => setShowSidebar(s => !s)} controlsId="participant-sidebar" />
+            <div>
+              <h1 style={{ margin: 0 }}>
+                {activeSection === "seminars" && "Available Seminars"}
+                {activeSection === "attendance" && "Attendance"}
+                {activeSection === "certificates" && "Certificates"}
+                {activeSection === "evaluation" && "Evaluations"}
+              </h1>
+              <p style={{ margin: "0.4rem 0 0 0", color: "#666", fontSize: "0.95rem" }}>
+                {activeSection === "seminars" && "Browse and join available seminars"}
+                {activeSection === "attendance" && "Mark attendance or open the scanner"}
+                {activeSection === "certificates" && "Download your certificates"}
+                {activeSection === "evaluation" && "Complete evaluations for seminars"}
+              </p>
+            </div>
+          </div>
+        </header>
         {showSidebar && <div className="sidebar-overlay" onClick={() => setShowSidebar(false)} aria-hidden="true"></div>}
         {renderContent()}
       </main>
