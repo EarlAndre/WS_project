@@ -181,7 +181,12 @@ export async function fetchAttendance(seminarId) {
 }
 
 export async function deleteSeminar(id) {
-  try {
+  // Try deleting on backend first, fall back to local removal
+  if (!id) return { data: null, error: { message: 'id required' } };
+
+  const res = await safeFetch(`${API_BASE_URL}/seminars/${id}/`, { method: 'DELETE' });
+  if (res.ok) {
+    // remove from local copy too
     const local = readLocal('seminars');
     const idx = local.findIndex(s => s.id === id);
     if (idx !== -1) {
@@ -189,10 +194,19 @@ export async function deleteSeminar(id) {
       writeLocal('seminars', local);
       return { data: [removed], error: null };
     }
-    return { data: null, error: { message: 'Not found' } };
-  } catch (err) {
-    return { data: null, error: err };
+    return { data: null, error: null };
   }
+
+  // Backend delete failed or offline — remove locally and notify user
+  const local = readLocal('seminars');
+  const idx = local.findIndex(s => s.id === id);
+  if (idx !== -1) {
+    const [removed] = local.splice(idx, 1);
+    writeLocal('seminars', local);
+    window.dispatchEvent(new CustomEvent('app-banner', { detail: 'Seminar deleted locally (offline or API error).' }));
+    return { data: [removed], error: { message: 'Deleted locally' } };
+  }
+  return { data: null, error: { message: 'Not found' } };
 }
 
 export async function saveJoinedParticipant(seminarId, participant) {
