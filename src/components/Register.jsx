@@ -13,7 +13,16 @@ function Register() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      let users = JSON.parse(localStorage.getItem('users') || '[]');
+      
+      // Seed default demo users if list is empty (first time setup)
+      if (users.length === 0) {
+        users = [
+          { id: '1', email: 'admin@example.com', password: 'admin' },
+          { id: '2', email: 'participant@example.com', password: 'participant' },
+        ];
+      }
+      
       const exists = users.find(u => (u.email || '').toLowerCase() === (email || '').toLowerCase());
       if (exists) {
         window.dispatchEvent(new CustomEvent('app-banner', { detail: 'Account already exists' }));

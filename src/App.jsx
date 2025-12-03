@@ -33,13 +33,27 @@ function App() {
   }, []);
 
   const handleLogin = async (username, password) => {
-    // Simple local auth: lookup registered users in localStorage
+    // Simple local auth: support demo users or check localStorage
     const email = username.includes("@") ? username.toLowerCase() : `${username}@example.com`;
+    
+    // Define demo users for testing
+    const demoUsers = [
+      { id: '1', email: 'admin@example.com', password: 'admin' },
+      { id: '2', email: 'participant@example.com', password: 'participant' },
+    ];
+    
     try {
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const found = users.find(u => (u.email || '').toLowerCase() === email && u.password === password);
+      // Check demo users first
+      let found = demoUsers.find(u => u.email === email && u.password === password);
+      
+      // If not demo user, check localStorage
       if (!found) {
-        setGlobalMessage('Authentication failed. Check your credentials.');
+        const users = JSON.parse(localStorage.getItem('users') || '[]');
+        found = users.find(u => (u.email || '').toLowerCase() === email && u.password === password);
+      }
+      
+      if (!found) {
+        setGlobalMessage('Authentication failed. Check your credentials. Try admin/admin or participant/participant');
         return;
       }
 
