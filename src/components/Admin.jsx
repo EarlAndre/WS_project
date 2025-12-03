@@ -172,7 +172,7 @@
               const updated = [...seminars, newSeminar];
               setSeminars(updated);
               localStorage.setItem("seminars", JSON.stringify(updated));
-              window.dispatchEvent(new CustomEvent('app-banner', { detail: "Seminar saved locally (supabase error)." }));
+              window.dispatchEvent(new CustomEvent('app-banner', { detail: "Seminar saved locally (offline or API error)." }));
             } else {
               // data is an array with inserted row
               const created = data && data[0] ? data[0] : newSeminar;

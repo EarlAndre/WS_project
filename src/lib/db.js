@@ -12,21 +12,40 @@ function readLocal(key) {
   }
 }
 
+async function safeFetch(url, opts = {}) {
+  try {
+    const headers = Object.assign({ 'Accept': 'application/json', 'Content-Type': 'application/json' }, opts.headers || {});
+    const response = await fetch(url, { ...opts, headers });
+    if (!response.ok) {
+      let body = null;
+      try { body = await response.text(); } catch (e) { body = '<no body>'; }
+      const errMsg = `API ${opts.method || 'GET'} failed: ${response.status} ${response.statusText}`;
+      console.error(errMsg, body);
+      // Dispatch event so UI can show the error as a banner
+      window.dispatchEvent(new CustomEvent('app-banner', { detail: `⚠️ Server error: ${response.status} ${response.statusText}. Using local fallback.` }));
+      return { ok: false, status: response.status, body, response };
+    }
+    const data = await response.json();
+    return { ok: true, data, response };
+  } catch (err) {
+    console.error('Network error for', url, err);
+    // Dispatch event for network errors
+    window.dispatchEvent(new CustomEvent('app-banner', { detail: `⚠️ Network error. Using local fallback.` }));
+    return { ok: false, error: err };
+  }
+}
+
 function writeLocal(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
 export async function fetchSeminars() {
-  try {
-    const response = await fetch(`${API_BASE_URL}/seminars/`);
-    if (response.ok) {
-      const data = await response.json();
-      writeLocal('seminars', data);
-      return { data, error: null };
-    }
-  } catch (err) {
-    // fallback to local
+  const res = await safeFetch(`${API_BASE_URL}/seminars/`);
+  if (res.ok && res.data) {
+    writeLocal('seminars', res.data);
+    return { data: res.data, error: null };
   }
+  // Fallback to local storage
   const data = readLocal('seminars');
   return { data, error: null };
 }
@@ -38,28 +57,25 @@ export async function createSeminar(seminar) {
     capacity: seminar.participants ? parseInt(seminar.participants, 10) : seminar.capacity || null,
   };
 
-  try {
-    const response = await fetch(`${API_BASE_URL}/seminars/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const data = await response.json();
-    if (response.ok) {
-      const local = readLocal('seminars');
-      local.push(data);
-      writeLocal('seminars', local);
-      return { data: [data], error: null };
-    }
-    throw new Error('Backend error');
-  } catch (err) {
+  const res = await safeFetch(`${API_BASE_URL}/seminars/`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+  if (res.ok && res.data) {
     const local = readLocal('seminars');
-    const id = Date.now();
-    const row = { id, ...payload, created_at: new Date().toISOString() };
-    local.push(row);
+    local.push(res.data);
     writeLocal('seminars', local);
-    return { data: [row], error: { message: 'Saved locally' } };
+    return { data: [res.data], error: null };
   }
+
+  // Fallback to localStorage if backend failed
+  const local = readLocal('seminars');
+  const id = Date.now();
+  const row = { id, ...payload, created_at: new Date().toISOString() };
+  local.push(row);
+  writeLocal('seminars', local);
+  return { data: [row], error: { message: 'Saved locally' } };
 }
 
 export async function upsertSeminar(seminar) {
@@ -87,20 +103,14 @@ export async function upsertSeminar(seminar) {
       local[idx] = { ...local[idx], ...payload };
       writeLocal('seminars', local);
     }
-    try {
-      const response = await fetch(`${API_BASE_URL}/seminars/${payload.id}/`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        return { data, error: null };
-      }
-      return { data: null, error: { message: 'Backend update failed' } };
-    } catch (err) {
-      return { data: null, error: err };
+    const res = await safeFetch(`${API_BASE_URL}/seminars/${payload.id}/`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+    if (res.ok && res.data) {
+      return { data: res.data, error: null };
     }
+    return { data: null, error: { message: 'Backend update failed' } };
   }
 
   // create new locally if no id
@@ -118,15 +128,9 @@ export async function recordTimeIn(seminarId, participant_email) {
     
     // Try backend first
     try {
-      const response = await fetch(`${API_BASE_URL}/attendance/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        return { data: [data], error: null };
-      }
+      const res = await safeFetch(`${API_BASE_URL}/attendance/`, { method: 'POST', body: JSON.stringify(payload) });
+      if (res.ok) return { data: [res.data], error: null };
+      // otherwise fall through to local
     } catch (err) {
       console.warn('Backend attendance failed:', err);
     }
@@ -155,15 +159,9 @@ export async function recordTimeOut(seminarId, participant_email) {
     
     // Try backend first
     try {
-      const response = await fetch(`${API_BASE_URL}/attendance/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        return { data: [data], error: null };
-      }
+      const res = await safeFetch(`${API_BASE_URL}/attendance/`, { method: 'POST', body: JSON.stringify(payload) });
+      if (res.ok) return { data: [res.data], error: null };
+      // otherwise fall through to local
     } catch (err) {
       console.warn('Backend attendance failed:', err);
     }
@@ -226,15 +224,8 @@ export async function saveJoinedParticipant(seminarId, participant) {
     
     // Try backend first
     try {
-      const response = await fetch(`${API_BASE_URL}/joined-participants/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        return { data: [data], error: null };
-      }
+      const res = await safeFetch(`${API_BASE_URL}/joined-participants/`, { method: 'POST', body: JSON.stringify(payload) });
+      if (res.ok) return { data: [res.data], error: null };
     } catch (err) {
       console.warn('Backend save joined participant failed:', err);
     }
@@ -251,33 +242,27 @@ export async function saveJoinedParticipant(seminarId, participant) {
 }
 
 export async function fetchJoinedParticipants(seminarId) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/joined-participants/${seminarId}/`);
-    if (response.ok) {
-      const data = await response.json();
-      return { data, error: null };
-    }
-  } catch (err) {
-    console.warn('Backend fetch failed');
+  const res = await safeFetch(`${API_BASE_URL}/joined-participants/${seminarId}/`);
+  if (res.ok && res.data) {
+    return { data: res.data, error: null };
   }
+  // Fallback to local storage
   const list = readLocal('joined_participants');
-  const data = list.filter(p => p.seminar_id === seminarId).sort((a, b) => new Date(a.joined_at) - new Date(b.joined_at));
+  const participant_email = localStorage.getItem('participantEmail') || localStorage.getItem('userEmail') || 'participant@example.com';
+  const data = list.filter(p => p.seminar_id === seminarId && p.participant_email === participant_email).sort((a, b) => new Date(a.joined_at) - new Date(b.joined_at));
   return { data, error: null };
 }
 
 export async function fetchEvaluations(seminarId, participant_email) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/evaluations/${seminarId}/`);
-    if (response.ok) {
-      let data = await response.json();
-      if (participant_email) data = data.filter(e => e.participant_email === participant_email);
-      return { data, error: null };
-    }
-  } catch (err) {
-    console.warn('Backend fetch failed');
+  const res = await safeFetch(`${API_BASE_URL}/evaluations/${seminarId}/`);
+  if (res.ok && res.data) {
+    let data = res.data;
+    if (participant_email) data = data.filter(e => e.participant_email === participant_email);
+    return { data, error: null };
   }
+  // Fallback to local storage
   const list = readLocal('evaluations');
-  let data = list.filter(e => e.seminar_id === seminarId);
+  let data = list.filter(e => e.seminar_id === seminarId && (participant_email ? e.participant_email === participant_email : true));
   if (participant_email) data = data.filter(e => e.participant_email === participant_email);
   return { data, error: null };
 }
@@ -285,6 +270,7 @@ export async function fetchEvaluations(seminarId, participant_email) {
 export async function hasEvaluated(seminarId, participant_email) {
   try {
     const list = readLocal('evaluations');
+    if (!participant_email) participant_email = localStorage.getItem('participantEmail') || localStorage.getItem('userEmail') || 'participant@example.com';
     const found = list.find(e => e.seminar_id === seminarId && e.participant_email === participant_email);
     return { evaluated: !!found, error: null };
   } catch (err) {
@@ -320,15 +306,8 @@ export async function saveEvaluation(seminarId, participant_email, answers) {
     
     // Try backend first
     try {
-      const response = await fetch(`${API_BASE_URL}/evaluations/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        return { data: [data], error: null };
-      }
+      const res = await safeFetch(`${API_BASE_URL}/evaluations/`, { method: 'POST', body: JSON.stringify(payload) });
+      if (res.ok) return { data: [res.data], error: null };
     } catch (err) {
       console.warn('Backend save evaluation failed:', err);
     }
@@ -350,15 +329,8 @@ export async function checkInParticipant(seminarId, participant_email) {
     
     // Try backend first
     try {
-      const response = await fetch(`${API_BASE_URL}/attendance/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        return { data: [data], error: null };
-      }
+      const res = await safeFetch(`${API_BASE_URL}/attendance/`, { method: 'POST', body: JSON.stringify(payload) });
+      if (res.ok) return { data: [res.data], error: null };
     } catch (err) {
       console.warn('Backend check-in failed:', err);
     }
@@ -389,15 +361,8 @@ export async function checkOutParticipant(seminarId, participant_email) {
     
     // Try backend first
     try {
-      const response = await fetch(`${API_BASE_URL}/attendance/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        return { data: [data], error: null };
-      }
+      const res = await safeFetch(`${API_BASE_URL}/attendance/`, { method: 'POST', body: JSON.stringify(payload) });
+      if (res.ok) return { data: [res.data], error: null };
     } catch (err) {
       console.warn('Backend check-out failed:', err);
     }

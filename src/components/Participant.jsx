@@ -20,6 +20,10 @@ function ParticipantDashboard({ onLogout }) {
     let mounted = true;
 
     async function load() {
+      const participant_email = localStorage.getItem('participantEmail') || localStorage.getItem('userEmail') || 'participant@example.com';
+      const joinedSeminarsKey = `joinedSeminars_${participant_email}`;
+      const completedEvalsKey = `completedEvaluations_${participant_email}`;
+
       try {
         const { data, error } = await dbFetchSeminars();
         if (!error && data) {
@@ -36,8 +40,8 @@ function ParticipantDashboard({ onLogout }) {
         if (mounted) setAvailableSeminars(storedSeminars);
       }
 
-      const storedJoined = JSON.parse(localStorage.getItem("joinedSeminars")) || [];
-      const storedCompletedEvals = JSON.parse(localStorage.getItem("completedEvaluations")) || [];
+      const storedJoined = JSON.parse(localStorage.getItem(joinedSeminarsKey)) || [];
+      const storedCompletedEvals = JSON.parse(localStorage.getItem(completedEvalsKey)) || [];
       if (mounted) {
         setJoinedSeminars(storedJoined);
         setCompletedEvaluations(storedCompletedEvals);
@@ -47,9 +51,12 @@ function ParticipantDashboard({ onLogout }) {
     load();
 
     const handleStorageChange = () => {
+      const participant_email = localStorage.getItem('participantEmail') || localStorage.getItem('userEmail') || 'participant@example.com';
+      const joinedSeminarsKey = `joinedSeminars_${participant_email}`;
+      const completedEvalsKey = `completedEvaluations_${participant_email}`;
       setAvailableSeminars(JSON.parse(localStorage.getItem("seminars")) || []);
-      setJoinedSeminars(JSON.parse(localStorage.getItem("joinedSeminars")) || []);
-      setCompletedEvaluations(JSON.parse(localStorage.getItem("completedEvaluations")) || []);
+      setJoinedSeminars(JSON.parse(localStorage.getItem(joinedSeminarsKey)) || []);
+      setCompletedEvaluations(JSON.parse(localStorage.getItem(completedEvalsKey)) || []);
     };
     window.addEventListener("storage", handleStorageChange);
     return () => {
@@ -86,13 +93,14 @@ function ParticipantDashboard({ onLogout }) {
     // Prepare participant identity (try stored participant info else fallback)
     const participant_email = localStorage.getItem('participantEmail') || 'participant@example.com';
     const participant_name = localStorage.getItem('participantName') || null;
+    const joinedSeminarsKey = `joinedSeminars_${participant_email}`;
 
     const entry = { ...seminar, completed: false };
 
     // Optimistic UI update
     const updated = [...joinedSeminars, entry];
     setJoinedSeminars(updated);
-    localStorage.setItem("joinedSeminars", JSON.stringify(updated));
+    localStorage.setItem(joinedSeminarsKey, JSON.stringify(updated));
 
     // Try to persist to Supabase (log response so we can debug)
     try {
@@ -145,16 +153,18 @@ function ParticipantDashboard({ onLogout }) {
 
   const handleScannerSuccess = async ({ seminarId, participantEmail }) => {
     // mark locally by seminarId (or fallback to index)
+    const participant_email = participantEmail || localStorage.getItem('participantEmail') || localStorage.getItem('userEmail') || 'participant@example.com';
+    const joinedSeminarsKey = `joinedSeminars_${participant_email}`;
     const idx = scanningFor;
     let updated = joinedSeminars;
     if (typeof idx === 'number') {
       updated = joinedSeminars.map((s, i) => i === idx ? { ...s, completed: true } : s);
       setJoinedSeminars(updated);
-      localStorage.setItem('joinedSeminars', JSON.stringify(updated));
+      localStorage.setItem(joinedSeminarsKey, JSON.stringify(updated));
     } else {
       updated = joinedSeminars.map((s) => s.id === seminarId ? { ...s, completed: true } : s);
       setJoinedSeminars(updated);
-      localStorage.setItem('joinedSeminars', JSON.stringify(updated));
+      localStorage.setItem(joinedSeminarsKey, JSON.stringify(updated));
     }
 
     // persist
@@ -176,15 +186,18 @@ function ParticipantDashboard({ onLogout }) {
 
   const handleDeleteAttendance = (title) => {
     if (!window.confirm(`Are you sure you want to delete "${title}"?`)) return;
+    const participant_email = localStorage.getItem('participantEmail') || localStorage.getItem('userEmail') || 'participant@example.com';
+    const joinedSeminarsKey = `joinedSeminars_${participant_email}`;
     const updated = joinedSeminars.filter((s) => s.title !== title);
     setJoinedSeminars(updated);
-    localStorage.setItem("joinedSeminars", JSON.stringify(updated));
+    localStorage.setItem(joinedSeminarsKey, JSON.stringify(updated));
   };
 
   const handleTimeOut = async (seminar) => {
     try {
       const seminarId = seminar.id || null;
       const participant_email = localStorage.getItem('participantEmail') || localStorage.getItem('userEmail') || 'participant@example.com';
+      const joinedSeminarsKey = `joinedSeminars_${participant_email}`;
       const res = await checkOutParticipant(seminarId, participant_email);
       if (res.error) {
         console.warn('Failed to persist time-out:', res.error);
@@ -193,7 +206,7 @@ function ParticipantDashboard({ onLogout }) {
         // update local joinedSeminars record to mark timed out
         const updated = joinedSeminars.map(s => s.id === seminar.id ? { ...s, checkedOut: true, check_out: new Date().toISOString() } : s);
         setJoinedSeminars(updated);
-        localStorage.setItem('joinedSeminars', JSON.stringify(updated));
+        localStorage.setItem(joinedSeminarsKey, JSON.stringify(updated));
         window.dispatchEvent(new CustomEvent('app-banner', { detail: 'Time-out recorded.' }));
       }
     } catch (err) {

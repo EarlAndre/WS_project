@@ -102,11 +102,11 @@ function CreateSeminar({ onLogout }) {
     const { data, error } = await dbCreateSeminar(payload);
 
     if (error) {
-      // Supabase returned an error — save locally and notify
+      // Backend returned an error — save locally and notify
       const seminars = JSON.parse(localStorage.getItem("seminars")) || [];
       seminars.push({ ...payload, created_locally: true, created_at: new Date().toISOString() });
       localStorage.setItem("seminars", JSON.stringify(seminars));
-      window.dispatchEvent(new CustomEvent('app-banner', { detail: "Seminar saved locally (supabase error)." }));
+      window.dispatchEvent(new CustomEvent('app-banner', { detail: "Seminar saved locally (offline or API error)." }));
     } else {
       // Successful insert — db usually returns the inserted row(s)
       const created = Array.isArray(data) && data[0] ? data[0] : null;

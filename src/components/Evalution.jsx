@@ -69,9 +69,10 @@ function Evaluation() {
 
   const handleSubmit = async () => {
     const participant_email = localStorage.getItem('participantEmail') || 'participant@example.com';
+    const completedEvalsKey = `completedEvaluations_${participant_email}`;
 
     // Prevent duplicate evaluation: check localStorage first
-    const completedEvaluations = JSON.parse(localStorage.getItem("completedEvaluations") || "[]");
+    const completedEvaluations = JSON.parse(localStorage.getItem(completedEvalsKey) || "[]");
     if (completedEvaluations.includes(selectedSeminar.title)) {
       window.dispatchEvent(new CustomEvent('app-banner', { detail: 'You have already submitted an evaluation for this seminar.' }));
       return;
@@ -100,7 +101,7 @@ function Evaluation() {
     if (!completedEvaluations.includes(selectedSeminar.title)) {
       completedEvaluations.push(selectedSeminar.title);
     }
-    localStorage.setItem("completedEvaluations", JSON.stringify(completedEvaluations));
+    localStorage.setItem(completedEvalsKey, JSON.stringify(completedEvaluations));
 
     // Try to persist evaluation to Supabase
     try {
