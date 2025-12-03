@@ -100,14 +100,14 @@ function ParticipantDashboard({ onLogout }) {
       const res = await saveJoinedParticipant(seminarId, { participant_email, participant_name });
       if (res.error) {
         console.warn('Failed to save joined participant to Supabase:', res.error);
-        window.dispatchEvent(new CustomEvent('app-banner', { detail: 'Join saved locally but failed to persist to Supabase. Check console for details.' }));
+        window.dispatchEvent(new CustomEvent('app-banner', { detail: 'Join saved locally.' }));
       } else {
         console.log('Joined participant saved to Supabase:', res.data);
-        window.dispatchEvent(new CustomEvent('app-banner', { detail: 'Joined and saved to Supabase.' }));
+        window.dispatchEvent(new CustomEvent('app-banner', { detail: 'Joined and saved.' }));
       }
     } catch (err) {
       console.warn('Unexpected error saving joined participant:', err);
-      window.dispatchEvent(new CustomEvent('app-banner', { detail: 'Join saved locally but unexpected error when saving to Supabase. Check console.' }));
+      window.dispatchEvent(new CustomEvent('app-banner', { detail: 'Join saved locally but unexpected error when saving. Check console.' }));
     }
   };
 
@@ -126,10 +126,10 @@ function ParticipantDashboard({ onLogout }) {
       const participant_email = localStorage.getItem('participantEmail') || localStorage.getItem('userEmail') || 'participant@example.com';
       const res = await checkInParticipant(seminarId, participant_email);
       if (res.error) {
-        console.warn('Failed to persist attendance to Supabase:', res.error);
-        window.dispatchEvent(new CustomEvent('app-banner', { detail: 'Attendance marked locally but failed to persist to Supabase.' }));
+        console.warn('Failed to persist attendance:', res.error);
+        window.dispatchEvent(new CustomEvent('app-banner', { detail: 'Attendance marked locally but failed to persist.' }));
       } else {
-        console.log('Attendance persisted to Supabase:', res.data);
+        console.log('Attendance persisted:', res.data);
       }
     } catch (err) {
       console.warn('Unexpected error while persisting attendance:', err);
@@ -161,8 +161,8 @@ function ParticipantDashboard({ onLogout }) {
     try {
       const res = await checkInParticipant(seminarId, participantEmail);
       if (res.error) {
-        console.warn('Failed to persist scanner attendance to Supabase:', res.error);
-        window.dispatchEvent(new CustomEvent('app-banner', { detail: 'Attendance marked locally but failed to persist to Supabase.' }));
+        console.warn('Failed to persist scanner attendance:', res.error);
+        window.dispatchEvent(new CustomEvent('app-banner', { detail: 'Attendance marked locally but failed to persist.' }));
       } else {
         window.dispatchEvent(new CustomEvent('app-banner', { detail: 'Attendance recorded.' }));
       }

@@ -7,7 +7,7 @@ import Profile from "./components/Profile";
 import Participant from "./components/Participant";
 import CreateSeminar from "./components/CreateSeminar";
 import QRRedirect from "./components/QRRedirect";
-import { supabase } from "./lib/supabaseClient";
+
 
 function App() {
   const navigate = useNavigate();
@@ -33,48 +33,35 @@ function App() {
   }, []);
 
   const handleLogin = async (username, password) => {
-    // Map simple usernames (e.g., "admin") to an email that exists in Supabase.
-    // If the user typed a proper email (contains @), use it as-is.
-    const email = username.includes("@") ? username : `${username}@example.com`;
-
+    // Simple local auth: lookup registered users in localStorage
+    const email = username.includes("@") ? username.toLowerCase() : `${username}@example.com`;
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        console.error('Authentication error', error);
-        const msg = (error.message && error.message.includes('Supabase keys'))
-          ? 'Supabase keys are missing. App is running in local/offline mode. Check console for details.'
-          : 'Authentication failed. Check your credentials.';
-        setGlobalMessage(msg);
+      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const found = users.find(u => (u.email || '').toLowerCase() === email && u.password === password);
+      if (!found) {
+        setGlobalMessage('Authentication failed. Check your credentials.');
         return;
       }
 
-      const userEmail = (data?.user?.email || email || "").toLowerCase();
-      const userId = data?.user?.id;
+      const userEmail = email;
+      const userId = found.id || String(Date.now());
 
-      // Persist basic session info locally for app usage
-      if (userEmail) localStorage.setItem("userEmail", userEmail);
-      if (userId) localStorage.setItem("userId", userId);
+      if (userEmail) localStorage.setItem('userEmail', userEmail);
+      if (userId) localStorage.setItem('userId', userId);
 
-      // Allow configuring one or more admin emails via env var `VITE_ADMIN_EMAILS`
-      // Example: VITE_ADMIN_EMAILS="admin@example.com,admin@vpaa.com"
-      const adminEmailsRaw = import.meta.env.VITE_ADMIN_EMAILS || import.meta.env.NEXT_PUBLIC_ADMIN_EMAILS || "admin@example.com";
-      const adminEmails = adminEmailsRaw.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
+      const adminEmailsRaw = import.meta.env.VITE_ADMIN_EMAILS || import.meta.env.NEXT_PUBLIC_ADMIN_EMAILS || 'admin@example.com';
+      const adminEmails = adminEmailsRaw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 
       if (adminEmails.includes(userEmail)) {
-        localStorage.setItem("userRole", "admin");
-        navigate("/admin");
+        localStorage.setItem('userRole', 'admin');
+        navigate('/admin');
       } else {
-        localStorage.setItem("userRole", "participant");
-        // If participant has no stored name/profile, send them to profile setup
-        const profileName = localStorage.getItem("participantName");
+        localStorage.setItem('userRole', 'participant');
+        const profileName = localStorage.getItem('participantName');
         if (!profileName) {
-          navigate("/profile");
+          navigate('/profile');
         } else {
-          navigate("/participant");
+          navigate('/participant');
         }
       }
     } catch (err) {
@@ -84,13 +71,10 @@ function App() {
   };
 
   const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (err) {
-      console.warn('Sign out error', err);
-    }
-    localStorage.removeItem("userRole");
-    navigate("/");
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userId');
+    navigate('/');
   };
 
   return (

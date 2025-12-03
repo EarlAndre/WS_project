@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../App.css";
-import { supabase } from "../lib/supabaseClient";
+
 
 function Register() {
   const navigate = useNavigate();
@@ -13,27 +13,22 @@ function Register() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.auth.signUp({ email, password });
-      if (error) {
-        window.dispatchEvent(new CustomEvent('app-banner', { detail: error.message || "Signup failed" }));
+      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const exists = users.find(u => (u.email || '').toLowerCase() === (email || '').toLowerCase());
+      if (exists) {
+        window.dispatchEvent(new CustomEvent('app-banner', { detail: 'Account already exists' }));
         setIsLoading(false);
         return;
       }
-
-      // Try to sign in immediately so user has session in-app.
-      const signIn = await supabase.auth.signInWithPassword({ email, password });
-      if (signIn.error) {
-        // signup succeeded but sign-in may require magic link or confirmation depending on project settings
-        window.dispatchEvent(new CustomEvent('app-banner', { detail: "Signup successful. Please check your email to confirm (if required). You can now sign in." }));
-        navigate("/");
-      } else {
-        localStorage.setItem("userEmail", email);
-        localStorage.setItem("userRole", email === "admin@example.com" ? "admin" : "participant");
-        navigate(email === "admin@example.com" ? "/admin" : "/participant");
-      }
+      const user = { id: String(Date.now()), email: (email || '').toLowerCase(), password };
+      users.push(user);
+      localStorage.setItem('users', JSON.stringify(users));
+      localStorage.setItem('userEmail', user.email);
+      localStorage.setItem('userRole', user.email === 'admin@example.com' ? 'admin' : 'participant');
+      navigate(user.email === 'admin@example.com' ? '/admin' : '/participant');
     } catch (err) {
       console.error(err);
-      window.dispatchEvent(new CustomEvent('app-banner', { detail: "Unexpected signup error" }));
+      window.dispatchEvent(new CustomEvent('app-banner', { detail: 'Unexpected signup error' }));
     } finally {
       setIsLoading(false);
     }
