@@ -122,77 +122,59 @@ export async function upsertSeminar(seminar) {
 }
 
 export async function recordTimeIn(seminarId, participant_email) {
-  try {
-    const now = new Date().toISOString();
-    const payload = { seminar: seminarId, participant_email, time_in: now };
-    
-    // Try backend first
-    try {
-      const res = await safeFetch(`${API_BASE_URL}/attendance/`, { method: 'POST', body: JSON.stringify(payload) });
-      if (res.ok) return { data: [res.data], error: null };
-      // otherwise fall through to local
-    } catch (err) {
-      console.warn('Backend attendance failed:', err);
-    }
-    
-    // Fallback to local
-    const attendance = readLocal('attendance');
-    let row = attendance.find(r => r.seminar_id === seminarId && r.participant_email === participant_email);
-    if (!row) {
-      row = { id: Date.now(), seminar_id: seminarId, participant_email, time_in: now, time_out: null, created_at: now };
-      attendance.push(row);
-      writeLocal('attendance', attendance);
-    } else if (!row.time_in) {
-      row.time_in = now;
-      writeLocal('attendance', attendance);
-    }
-    return { data: [row], error: null };
-  } catch (err) {
-    return { data: null, error: err };
+  const now = new Date().toISOString();
+  const payload = { seminar: seminarId, participant_email, time_in: now };
+  
+  // Try backend first
+  const res = await safeFetch(`${API_BASE_URL}/attendance/`, { method: 'POST', body: JSON.stringify(payload) });
+  if (res.ok && res.data) {
+    return { data: [res.data], error: null };
   }
+  
+  // Fallback to local
+  const attendance = readLocal('attendance');
+  let row = attendance.find(r => r.seminar_id === seminarId && r.participant_email === participant_email);
+  if (!row) {
+    row = { id: Date.now(), seminar_id: seminarId, participant_email, time_in: now, time_out: null, created_at: now };
+    attendance.push(row);
+    writeLocal('attendance', attendance);
+  } else if (!row.time_in) {
+    row.time_in = now;
+    writeLocal('attendance', attendance);
+  }
+  return { data: [row], error: null };
 }
 
 export async function recordTimeOut(seminarId, participant_email) {
-  try {
-    const now = new Date().toISOString();
-    const payload = { seminar: seminarId, participant_email, time_out: now };
-    
-    // Try backend first
-    try {
-      const res = await safeFetch(`${API_BASE_URL}/attendance/`, { method: 'POST', body: JSON.stringify(payload) });
-      if (res.ok) return { data: [res.data], error: null };
-      // otherwise fall through to local
-    } catch (err) {
-      console.warn('Backend attendance failed:', err);
-    }
-    
-    // Fallback to local
-    const attendance = readLocal('attendance');
-    let row = attendance.find(r => r.seminar_id === seminarId && r.participant_email === participant_email);
-    if (!row) {
-      row = { id: Date.now(), seminar_id: seminarId, participant_email, time_in: null, time_out: now, created_at: now };
-      attendance.push(row);
-      writeLocal('attendance', attendance);
-    } else if (!row.time_out) {
-      row.time_out = now;
-      writeLocal('attendance', attendance);
-    }
-    return { data: [row], error: null };
-  } catch (err) {
-    return { data: null, error: err };
+  const now = new Date().toISOString();
+  const payload = { seminar: seminarId, participant_email, time_out: now };
+  
+  // Try backend first
+  const res = await safeFetch(`${API_BASE_URL}/attendance/`, { method: 'POST', body: JSON.stringify(payload) });
+  if (res.ok && res.data) {
+    return { data: [res.data], error: null };
   }
+  
+  // Fallback to local
+  const attendance = readLocal('attendance');
+  let row = attendance.find(r => r.seminar_id === seminarId && r.participant_email === participant_email);
+  if (!row) {
+    row = { id: Date.now(), seminar_id: seminarId, participant_email, time_in: null, time_out: now, created_at: now };
+    attendance.push(row);
+    writeLocal('attendance', attendance);
+  } else if (!row.time_out) {
+    row.time_out = now;
+    writeLocal('attendance', attendance);
+  }
+  return { data: [row], error: null };
 }
 
 export async function fetchAttendance(seminarId) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/attendance/${seminarId}/`);
-    if (response.ok) {
-      const data = await response.json();
-      return { data, error: null };
-    }
-  } catch (err) {
-    console.warn('Backend fetch failed');
+  const res = await safeFetch(`${API_BASE_URL}/attendance/${seminarId}/`);
+  if (res.ok && res.data) {
+    return { data: res.data, error: null };
   }
+  // Fallback to local storage
   const attendance = readLocal('attendance');
   const data = attendance.filter(a => a.seminar_id === seminarId).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
   return { data, error: null };
@@ -214,31 +196,25 @@ export async function deleteSeminar(id) {
 }
 
 export async function saveJoinedParticipant(seminarId, participant) {
-  try {
-    const payload = {
-      seminar: seminarId,
-      participant_email: participant.participant_email || null,
-      participant_name: participant.participant_name || null,
-      metadata: participant.metadata || null,
-    };
-    
-    // Try backend first
-    try {
-      const res = await safeFetch(`${API_BASE_URL}/joined-participants/`, { method: 'POST', body: JSON.stringify(payload) });
-      if (res.ok) return { data: [res.data], error: null };
-    } catch (err) {
-      console.warn('Backend save joined participant failed:', err);
-    }
-    
-    // Fallback to localStorage
-    const list = readLocal('joined_participants');
-    const row = { id: Date.now(), ...payload, seminar_id: seminarId, joined_at: new Date().toISOString() };
-    list.push(row);
-    writeLocal('joined_participants', list);
-    return { data: [row], error: { message: 'Saved locally' } };
-  } catch (err) {
-    return { data: null, error: err };
+  const payload = {
+    seminar: seminarId,
+    participant_email: participant.participant_email || null,
+    participant_name: participant.participant_name || null,
+    metadata: participant.metadata || null,
+  };
+  
+  // Try backend first
+  const res = await safeFetch(`${API_BASE_URL}/joined-participants/`, { method: 'POST', body: JSON.stringify(payload) });
+  if (res.ok && res.data) {
+    return { data: [res.data], error: null };
   }
+  
+  // Fallback to localStorage
+  const list = readLocal('joined_participants');
+  const row = { id: Date.now(), ...payload, seminar_id: seminarId, joined_at: new Date().toISOString() };
+  list.push(row);
+  writeLocal('joined_participants', list);
+  return { data: [row], error: { message: 'Saved locally' } };
 }
 
 export async function fetchJoinedParticipants(seminarId) {
@@ -301,91 +277,73 @@ export async function uploadCertificateTemplate(seminarId, file) {
 }
 
 export async function saveEvaluation(seminarId, participant_email, answers) {
-  try {
-    const payload = { seminar: seminarId, participant_email, answers };
-    
-    // Try backend first
-    try {
-      const res = await safeFetch(`${API_BASE_URL}/evaluations/`, { method: 'POST', body: JSON.stringify(payload) });
-      if (res.ok) return { data: [res.data], error: null };
-    } catch (err) {
-      console.warn('Backend save evaluation failed:', err);
-    }
-    
-    // Fallback to localStorage
-    const list = readLocal('evaluations');
-    const row = { id: Date.now(), ...payload, seminar_id: seminarId, created_at: new Date().toISOString() };
-    list.push(row);
-    writeLocal('evaluations', list);
-    return { data: [row], error: { message: 'Saved locally' } };
-  } catch (err) {
-    return { data: null, error: err };
+  const payload = { seminar: seminarId, participant_email, answers };
+  
+  // Try backend first
+  const res = await safeFetch(`${API_BASE_URL}/evaluations/`, { method: 'POST', body: JSON.stringify(payload) });
+  if (res.ok && res.data) {
+    return { data: [res.data], error: null };
   }
+  
+  // Fallback to localStorage
+  const list = readLocal('evaluations');
+  const row = { id: Date.now(), ...payload, seminar_id: seminarId, created_at: new Date().toISOString() };
+  list.push(row);
+  writeLocal('evaluations', list);
+  return { data: [row], error: { message: 'Saved locally' } };
 }
 
 export async function checkInParticipant(seminarId, participant_email) {
-  try {
-    const payload = { seminar: seminarId, participant_email, time_in: new Date().toISOString() };
-    
-    // Try backend first
-    try {
-      const res = await safeFetch(`${API_BASE_URL}/attendance/`, { method: 'POST', body: JSON.stringify(payload) });
-      if (res.ok) return { data: [res.data], error: null };
-    } catch (err) {
-      console.warn('Backend check-in failed:', err);
-    }
-    
-    // Fallback to localStorage
-    const list = readLocal('joined_participants');
-    let row = list.find(p => p.seminar_id === seminarId && p.participant_email === participant_email);
-    if (row) {
-      row.present = true;
-      row.check_in = new Date().toISOString();
-      writeLocal('joined_participants', list);
-      return { data: [row], error: null };
-    }
-
-    // If no joined_participants local record exists, create one so we can persist the check-in locally
-    const newRow = { id: Date.now(), seminar_id: seminarId, participant_email, participant_name: null, metadata: null, joined_at: new Date().toISOString(), present: true, check_in: new Date().toISOString(), check_out: null };
-    list.push(newRow);
-    writeLocal('joined_participants', list);
-    return { data: [newRow], error: null };
-  } catch (err) {
-    return { data: null, error: err };
+  const payload = { seminar: seminarId, participant_email, time_in: new Date().toISOString() };
+  
+  // Try backend first
+  const res = await safeFetch(`${API_BASE_URL}/attendance/`, { method: 'POST', body: JSON.stringify(payload) });
+  if (res.ok && res.data) {
+    return { data: [res.data], error: null };
   }
+  
+  // Fallback to localStorage
+  const list = readLocal('joined_participants');
+  let row = list.find(p => p.seminar_id === seminarId && p.participant_email === participant_email);
+  if (row) {
+    row.present = true;
+    row.check_in = new Date().toISOString();
+    writeLocal('joined_participants', list);
+    return { data: [row], error: null };
+  }
+
+  // If no joined_participants local record exists, create one so we can persist the check-in locally
+  const newRow = { id: Date.now(), seminar_id: seminarId, participant_email, participant_name: null, metadata: null, joined_at: new Date().toISOString(), present: true, check_in: new Date().toISOString(), check_out: null };
+  list.push(newRow);
+  writeLocal('joined_participants', list);
+  return { data: [newRow], error: null };
 }
 
 export async function checkOutParticipant(seminarId, participant_email) {
-  try {
-    const payload = { seminar: seminarId, participant_email, time_out: new Date().toISOString() };
-    
-    // Try backend first
-    try {
-      const res = await safeFetch(`${API_BASE_URL}/attendance/`, { method: 'POST', body: JSON.stringify(payload) });
-      if (res.ok) return { data: [res.data], error: null };
-    } catch (err) {
-      console.warn('Backend check-out failed:', err);
-    }
-    
-    // Fallback to localStorage
-    const list = readLocal('joined_participants');
-    let row = list.find(p => p.seminar_id === seminarId && p.participant_email === participant_email);
-    if (row) {
-      row.present = false;
-      row.check_out = new Date().toISOString();
-      writeLocal('joined_participants', list);
-      return { data: [row], error: null };
-    }
-
-    // If no local joined_participants record exists (e.g., the join was only saved on server or in joinedSeminars),
-    // create a local record so the time-out is preserved offline.
-    const newRow = { id: Date.now(), seminar_id: seminarId, participant_email, participant_name: null, metadata: null, joined_at: new Date().toISOString(), present: false, check_in: null, check_out: new Date().toISOString() };
-    list.push(newRow);
-    writeLocal('joined_participants', list);
-    return { data: [newRow], error: null };
-  } catch (err) {
-    return { data: null, error: err };
+  const payload = { seminar: seminarId, participant_email, time_out: new Date().toISOString() };
+  
+  // Try backend first
+  const res = await safeFetch(`${API_BASE_URL}/attendance/`, { method: 'POST', body: JSON.stringify(payload) });
+  if (res.ok && res.data) {
+    return { data: [res.data], error: null };
   }
+  
+  // Fallback to localStorage
+  const list = readLocal('joined_participants');
+  let row = list.find(p => p.seminar_id === seminarId && p.participant_email === participant_email);
+  if (row) {
+    row.present = false;
+    row.check_out = new Date().toISOString();
+    writeLocal('joined_participants', list);
+    return { data: [row], error: null };
+  }
+
+  // If no local joined_participants record exists (e.g., the join was only saved on server or in joinedSeminars),
+  // create a local record so the time-out is preserved offline.
+  const newRow = { id: Date.now(), seminar_id: seminarId, participant_email, participant_name: null, metadata: null, joined_at: new Date().toISOString(), present: false, check_in: null, check_out: new Date().toISOString() };
+  list.push(newRow);
+  writeLocal('joined_participants', list);
+  return { data: [newRow], error: null };
 }
 
 export async function saveAllSeminars(seminars) {
