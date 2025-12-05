@@ -4,7 +4,6 @@
   import "../App.css";
   import { fetchSeminars, createSeminar as dbCreateSeminar, upsertSeminar as dbUpsertSeminar, deleteSeminar as dbDeleteSeminar, fetchJoinedParticipants, saveJoinedParticipant, saveEvaluation, saveAllSeminars } from "../lib/db";
   import HamburgerToggle from './HamburgerToggle';
-  import HealthIndicator from './HealthIndicator';
   import { useNavigate } from "react-router-dom";
 
 
@@ -295,9 +294,44 @@
       return () => { mounted = false; };
     }, [seminars]);
 
+    // Helper: fetch external images and convert to data URLs to avoid CORS issues
+    const embedExternalImages = async (design) => {
+      const result = { ...design };
+      const imageFields = ['authorizedSignatureImage', 'sealImage', 'backgroundImage'];
+      
+      for (const field of imageFields) {
+        const url = result[field];
+        // If it's an external URL (http/https and not already a data URL), fetch and embed
+        if (url && typeof url === 'string' && url.startsWith('http') && !url.startsWith('data:')) {
+          try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const blob = await response.blob();
+            const reader = new FileReader();
+            await new Promise((resolve, reject) => {
+              reader.onload = () => {
+                result[field] = reader.result; // now a data URL
+                resolve();
+              };
+              reader.onerror = () => reject(reader.error);
+              reader.readAsDataURL(blob);
+            });
+            window.dispatchEvent(new CustomEvent('app-banner', { detail: `✓ Embedded ${field} from external URL.` }));
+          } catch (err) {
+            console.warn(`Failed to embed external image (${field}):`, err);
+            window.dispatchEvent(new CustomEvent('app-banner', { detail: `⚠ Could not fetch ${field}. Keep URL or re-upload the file.` }));
+          }
+        }
+      }
+      return result;
+    };
+
     // Save certificate design to localStorage
-    const saveCertificateDesign = () => {
-      localStorage.setItem('certificateDesign', JSON.stringify(certDesign));
+    const saveCertificateDesign = async () => {
+      // Embed external images to avoid CORS issues during certificate generation
+      const designToSave = await embedExternalImages(certDesign);
+      setCertDesign(designToSave); // update state with embedded images
+      localStorage.setItem('certificateDesign', JSON.stringify(designToSave));
       window.dispatchEvent(new CustomEvent('app-banner', { detail: 'Certificate design saved successfully!' }));
       setShowCertDesignModal(false);
     };
@@ -823,10 +857,7 @@
           </header>
 
           {/* sync button removed */}
-            {/* Health indicator */}
-            <div style={{ marginLeft: 12 }}>
-              <HealthIndicator />
-            </div>
+            {/* Health indicator removed per user request */}
           {/* Dashboard Overview */}
           {activeTab === "dashboard" && (
             <div className="dashboard-overview">
