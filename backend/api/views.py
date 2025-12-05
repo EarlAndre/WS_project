@@ -1,17 +1,20 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from .utils import exception_catcher
 from .models import Seminar, Attendance, JoinedParticipant, Certificate, Evaluation
 from .serializers import SeminarSerializer, AttendanceSerializer, JoinedParticipantSerializer, CertificateSerializer, EvaluationSerializer
 
 
 @api_view(['GET'])
+@exception_catcher
 def health_check(request):
     """Health check endpoint"""
     return Response({'status': 'Backend is running', 'storage': 'SQLite local'})
 
 
 @api_view(['GET', 'POST', 'PUT', 'DELETE'])
+@exception_catcher
 def seminars(request, seminar_id=None):
     """Get all seminars, create, update, or delete a seminar (stored in SQLite)"""
     # GET -> list all
@@ -49,8 +52,16 @@ def seminars(request, seminar_id=None):
         except Seminar.DoesNotExist:
             return Response({'error': 'Seminar not found'}, status=status.HTTP_404_NOT_FOUND)
 
+    # If DELETE/PUT were called without a seminar_id, return a clear error
+    if request.method in ['DELETE', 'PUT'] and not seminar_id:
+        return Response({'error': 'seminar_id is required for this operation'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Fallback for any other unhandled case
+    return Response({'error': 'Invalid request'}, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['GET', 'POST'])
+@exception_catcher
 def attendance(request, seminar_id=None):
     """Get attendance records, create attendance record for a seminar"""
     # GET -> list attendance for a seminar
@@ -88,6 +99,7 @@ def attendance(request, seminar_id=None):
 
 
 @api_view(['GET', 'POST'])
+@exception_catcher
 def joined_participants(request, seminar_id=None):
     """Get joined participants, create joined participant record"""
     # GET -> list joined participants for a seminar
@@ -109,6 +121,7 @@ def joined_participants(request, seminar_id=None):
 
 
 @api_view(['GET', 'POST'])
+@exception_catcher
 def evaluations(request, seminar_id=None):
     """Get evaluations, create evaluation record"""
     # GET -> list evaluations for a seminar
@@ -130,6 +143,7 @@ def evaluations(request, seminar_id=None):
 
 
 @api_view(['GET', 'POST'])
+@exception_catcher
 def certificates(request, seminar_id=None):
     """Get certificates, create certificate record"""
     # GET -> list certificates for a seminar

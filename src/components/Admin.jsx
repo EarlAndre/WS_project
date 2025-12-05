@@ -4,6 +4,7 @@
   import "../App.css";
   import { fetchSeminars, createSeminar as dbCreateSeminar, upsertSeminar as dbUpsertSeminar, deleteSeminar as dbDeleteSeminar, fetchJoinedParticipants, saveJoinedParticipant, saveEvaluation, saveAllSeminars } from "../lib/db";
   import HamburgerToggle from './HamburgerToggle';
+  import HealthIndicator from './HealthIndicator';
   import { useNavigate } from "react-router-dom";
 
 
@@ -822,7 +823,10 @@
           </header>
 
           {/* sync button removed */}
-
+            {/* Health indicator */}
+            <div style={{ marginLeft: 12 }}>
+              <HealthIndicator />
+            </div>
           {/* Dashboard Overview */}
           {activeTab === "dashboard" && (
             <div className="dashboard-overview">

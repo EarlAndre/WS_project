@@ -1,4 +1,24 @@
-const API_BASE_URL = 'http://localhost:8000/api';
+// Determine API base URL. Prefer Vite env `VITE_API_BASE_URL` when available.
+// Fallbacks:
+// - during local development, use http://localhost:8000/api
+// - in production (deployed with Django), use relative `/api`
+// Allow an explicit override via `window.VITE_API_BASE_URL` (useful in dev),
+// otherwise use localhost backend during local dev, or relative `/api` in prod.
+// Default resolution rules:
+// - If `window.VITE_API_BASE_URL` is set and is an absolute URL (starts with http), use it.
+// - During local dev (hostname localhost or 127.0.0.1) prefer a RELATIVE `/api` path
+//   so the Vite dev server proxy (configured in `vite.config.js`) can forward requests
+//   to the backend and avoid CORS issues.
+// - Otherwise use relative `/api` in production.
+let API_BASE_URL = '/api';
+if (typeof window !== 'undefined' && window.VITE_API_BASE_URL) {
+  const candidate = String(window.VITE_API_BASE_URL).replace(/\/+$/g, '');
+  if (/^https?:\/\//i.test(candidate)) {
+    API_BASE_URL = candidate;
+  }
+} else if (typeof window !== 'undefined' && !(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+  API_BASE_URL = '/api';
+}
 
 // All frontend data is stored locally (localStorage) and synced with the
 // Django backend where applicable. There is no Supabase usage in the
@@ -29,8 +49,10 @@ async function safeFetch(url, opts = {}) {
     return { ok: true, data, response };
   } catch (err) {
     console.error('Network error for', url, err);
-    // Dispatch event for network errors
-    window.dispatchEvent(new CustomEvent('app-banner', { detail: `⚠️ Network error. Using local fallback.` }));
+    // Dispatch event for network errors with helpful guidance
+    const msg = `⚠️ Network error contacting API (${API_BASE_URL}). Using local fallback.` +
+      (err && err.message ? ` (${err.message})` : '');
+    window.dispatchEvent(new CustomEvent('app-banner', { detail: msg }));
     return { ok: false, error: err };
   }
 }

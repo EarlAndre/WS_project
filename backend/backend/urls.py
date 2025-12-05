@@ -16,8 +16,13 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.views.generic import RedirectView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
+    # Accept '/api' (no trailing slash) and redirect to '/api/' so browsers
+    # visiting /api don't get a 404 when CommonMiddleware or APPEND_SLASH
+    # isn't ensuring the trailing slash.
+    path('api', RedirectView.as_view(url='/api/', permanent=False)),
 ]

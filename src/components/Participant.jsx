@@ -327,7 +327,7 @@ if (Array.isArray(storedJoined) && storedJoined.length > 0) {
     
     const logoImg = new Image();
     logoImg.src = "/logo.svg";
-    
+
     const deptLogoImg = new Image();
     deptLogoImg.src = "/department_logo.svg";
     
@@ -440,7 +440,34 @@ if (Array.isArray(storedJoined) && storedJoined.length > 0) {
 
     document.body.appendChild(certDiv);
 
-    const canvas = await html2canvas(certDiv, { scale: 2, backgroundColor: "#ffffff" });
+    // Wait for all images inside the certificate to load and attempt to set crossOrigin
+    const imgs = Array.from(certDiv.querySelectorAll('img'));
+    const imgLoadPromises = imgs.map((img) => {
+      return new Promise((resolve) => {
+        // If image is an external URL (not a data: url) attempt anonymous CORS
+        try {
+          if (img.src && img.src.startsWith('http') && !img.src.startsWith(window.location.origin) && !img.src.startsWith('data:')) {
+            img.crossOrigin = 'anonymous';
+          }
+        } catch (e) {
+          // ignore
+        }
+
+        if (img.complete && img.naturalWidth !== 0) return resolve(true);
+        img.onload = () => resolve(true);
+        img.onerror = () => resolve(false);
+      });
+    });
+
+    const imgResults = await Promise.all(imgLoadPromises);
+    const anyFailed = imgResults.some(r => r === false);
+    if (anyFailed) {
+      // Notify developer / user: external images may be blocked by CORS — recommend uploading
+      window.dispatchEvent(new CustomEvent('app-banner', { detail: 'Some certificate images failed to load due to CORS or network issues. Try uploading the image in Admin (recommended).' }));
+    }
+
+    // Use CORS-aware html2canvas call where possible
+    const canvas = await html2canvas(certDiv, { scale: 2, backgroundColor: "#ffffff", useCORS: true, allowTaint: false });
     const imgData = canvas.toDataURL("image/png");
     const pdf = new jsPDF("landscape", "mm", "a4");
     const imgWidth = 297;
