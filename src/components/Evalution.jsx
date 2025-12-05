@@ -1,19 +1,54 @@
 import React, { useState, useEffect } from "react";
 import "../App.css";
-import { saveEvaluation, fetchEvaluations } from "../lib/db";
+import { saveEvaluation, fetchEvaluations, fetchAttendance } from "../lib/db";
 
 function Evaluation() {
   const [seminars, setSeminars] = useState([]);
+  const [attendedSeminars, setAttendedSeminars] = useState([]);
   const [selectedSeminar, setSelectedSeminar] = useState(null);
   const [answers, setAnswers] = useState({});
   const [completion, setCompletion] = useState(0);
   const [animatedCompletion, setAnimatedCompletion] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [showCheckmark, setShowCheckmark] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedSeminars = JSON.parse(localStorage.getItem("seminars")) || [];
-    setSeminars(storedSeminars);
+    const loadSeminarsAndAttendance = async () => {
+      try {
+        const storedSeminars = JSON.parse(localStorage.getItem("seminars")) || [];
+        const participant_email = localStorage.getItem('participantEmail') || localStorage.getItem('userEmail') || 'participant@example.com';
+        
+        // Get all attended seminars for this participant
+        const attendedSeminarIds = new Set();
+        
+        // Check attendance records for each seminar
+        for (const seminar of storedSeminars) {
+          try {
+            const attendanceRes = await fetchAttendance(seminar.id);
+            if (attendanceRes && attendanceRes.data) {
+              const userAttendance = attendanceRes.data.find(a => a.participant_email === participant_email);
+              if (userAttendance) {
+                attendedSeminarIds.add(seminar.id);
+              }
+            }
+          } catch (err) {
+            console.warn('Error checking attendance for seminar', seminar.id, err);
+          }
+        }
+        
+        // Filter seminars to only show attended ones
+        const attendedSeминars = storedSeminars.filter(s => attendedSeminarIds.has(s.id));
+        setSeminars(storedSeminars); // Keep all for reference
+        setAttendedSeminars(attendedSeминars); // Show only attended
+      } catch (err) {
+        console.error('Error loading seminars and attendance:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadSeminarsAndAttendance();
   }, []);
 
   useEffect(() => {
@@ -68,30 +103,39 @@ function Evaluation() {
   };
 
   const handleSubmit = async () => {
-    const participant_email = localStorage.getItem('participantEmail') || 'participant@example.com';
+    const participant_email = localStorage.getItem('participantEmail') || localStorage.getItem('userEmail') || 'participant@example.com';
     const completedEvalsKey = `completedEvaluations_${participant_email}`;
 
     // Prevent duplicate evaluation: use seminar ID to avoid title mismatches
     const completedEvaluations = JSON.parse(localStorage.getItem(completedEvalsKey) || "[]");
     const seminarId = selectedSeminar?.id || null;
+    
+    console.log('Submitting evaluation for:', participant_email, 'Seminar ID:', seminarId);
+    
     if (seminarId && completedEvaluations.includes(seminarId)) {
       window.dispatchEvent(new CustomEvent('app-banner', { detail: 'You have already submitted an evaluation for this seminar.' }));
       return;
     }
 
-    // Also check DB to be safe
+    // Also check DB to be safe (only for THIS participant)
     try {
       const res = await fetchEvaluations(seminarId, participant_email);
+      console.log('Evaluation check response:', res);
+      
       if (res && res.data && res.data.length > 0) {
-        // Evaluation exists on backend; mark as completed locally by ID and refresh UI
-        if (seminarId && !completedEvaluations.includes(seminarId)) {
-          completedEvaluations.push(seminarId);
-          localStorage.setItem(completedEvalsKey, JSON.stringify(completedEvaluations));
+        // Check if any of the returned evaluations are actually for THIS participant
+        const userEvaluation = res.data.find(e => e.participant_email === participant_email);
+        if (userEvaluation) {
+          // Evaluation exists on backend for THIS user; mark as completed locally by ID and refresh UI
+          if (seminarId && !completedEvaluations.includes(seminarId)) {
+            completedEvaluations.push(seminarId);
+            localStorage.setItem(completedEvalsKey, JSON.stringify(completedEvaluations));
+          }
+          window.dispatchEvent(new CustomEvent('app-banner', { detail: 'You have already submitted an evaluation for this seminar.' }));
+          // Dispatch storage change event so parent components refresh
+          window.dispatchEvent(new StorageEvent('storage', { key: completedEvalsKey, newValue: JSON.stringify(completedEvaluations) }));
+          return;
         }
-        window.dispatchEvent(new CustomEvent('app-banner', { detail: 'You have already submitted an evaluation for this seminar.' }));
-        // Dispatch storage change event so parent components refresh
-        window.dispatchEvent(new StorageEvent('storage', { key: completedEvalsKey, newValue: JSON.stringify(completedEvaluations) }));
-        return;
       }
     } catch (err) {
       console.warn('Error checking existing evaluations:', err);
@@ -153,7 +197,15 @@ function Evaluation() {
           gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
           gap: "1.5rem"
         }}>
-          {seminars.length === 0 ? (
+          {loading ? (
+            <div style={{
+              gridColumn: "1 / -1",
+              textAlign: "center",
+              padding: "2rem"
+            }}>
+              <p>Loading seminars...</p>
+            </div>
+          ) : attendedSeminars.length === 0 ? (
             <div style={{
               gridColumn: "1 / -1",
               background: "#f8fafc",
@@ -163,10 +215,10 @@ function Evaluation() {
               border: "2px dashed #e0e0e0"
             }}>
               <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>📭</div>
-              <p style={{ fontSize: "1.1rem", color: "#666", margin: 0 }}>No seminars available for evaluation.</p>
+              <p style={{ fontSize: "1.1rem", color: "#666", margin: 0 }}>You haven't attended any seminars yet.</p>
             </div>
           ) : (
-            seminars.map((s, i) => (
+            attendedSeminars.map((s, i) => (
               <div
                 key={i}
                 onClick={() => handleSelectSeminar(s)}

@@ -162,3 +162,84 @@ def certificates(request, seminar_id=None):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@exception_catcher
+def google_form_submit(request):
+    """Webhook endpoint for Google Forms submission via Apps Script"""
+    from django.conf import settings
+    
+    # Validate the secret token from environment
+    expected_token = settings.GOOGLE_FORM_SECRET
+    provided_token = request.data.get('secret_token')
+    
+    if not expected_token or provided_token != expected_token:
+        return Response({'error': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
+    
+    # Extract form data
+    seminar_id = request.data.get('seminar_id')
+    participant_email = request.data.get('email')
+    participant_name = request.data.get('name')
+    year_section = request.data.get('year_section')
+    
+    if not seminar_id or not participant_email:
+        return Response({'error': 'Missing required fields: seminar_id, email'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        seminar = Seminar.objects.get(pk=seminar_id)
+    except Seminar.DoesNotExist:
+        return Response({'error': 'Seminar not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    # Record attendance (time IN)
+    from django.utils import timezone
+    now = timezone.now()
+    
+    attendance_data = {
+        'seminar': seminar_id,
+        'participant_email': participant_email,
+        'time_in': now
+    }
+    
+    attendance_serializer = AttendanceSerializer(data=attendance_data)
+    if attendance_serializer.is_valid():
+        attendance_serializer.save()
+    else:
+        # Try to update existing record
+        try:
+            attendance = Attendance.objects.get(seminar_id=seminar_id, participant_email=participant_email)
+            attendance.time_in = now
+            attendance.save()
+        except Attendance.DoesNotExist:
+            return Response({'error': 'Failed to record attendance', 'details': attendance_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Also save as joined participant with name and year/section info
+    joined_data = {
+        'seminar': seminar_id,
+        'participant_email': participant_email,
+        'participant_name': participant_name,
+        'metadata': {'year_section': year_section}
+    }
+    
+    joined_serializer = JoinedParticipantSerializer(data=joined_data)
+    if joined_serializer.is_valid():
+        joined_serializer.save()
+    else:
+        # If already exists, just update it
+        try:
+            joined = JoinedParticipant.objects.get(seminar_id=seminar_id, participant_email=participant_email)
+            joined.participant_name = participant_name
+            joined.metadata = {'year_section': year_section}
+            joined.present = True
+            joined.check_in = now
+            joined.save()
+        except JoinedParticipant.DoesNotExist:
+            pass  # Joined participant creation failed but attendance was recorded, that's okay
+    
+    return Response({
+        'status': 'success',
+        'message': 'Attendance recorded',
+        'email': participant_email,
+        'name': participant_name,
+        'seminar_id': seminar_id
+    }, status=status.HTTP_201_CREATED)

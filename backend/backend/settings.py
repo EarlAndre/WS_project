@@ -28,6 +28,9 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '*']
 
+# Google Forms webhook secret token
+GOOGLE_FORM_SECRET = config('GOOGLE_FORM_SECRET', default='your-secret-token-here')
+
 
 # Application definition
 

@@ -13,4 +13,5 @@ urlpatterns = [
     path('evaluations/<int:seminar_id>/', views.evaluations, name='evaluations-detail'),
     path('certificates/', views.certificates, name='certificates'),
     path('certificates/<int:seminar_id>/', views.certificates, name='certificates-detail'),
+    path('google-form-submit/', views.google_form_submit, name='google-form-submit'),
 ]
