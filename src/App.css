@@ -434,9 +434,10 @@ button {
 
 /* Seminar List */
 .seminar-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 1.8rem;
+  justify-content: flex-start;
 }
 
 .seminar-card {

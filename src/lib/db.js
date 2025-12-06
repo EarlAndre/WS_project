@@ -412,6 +412,181 @@ export async function saveAllSeminars(seminars) {
   return { data: payload, error: null };
 }
 
+/**
+ * Sort seminars by various criteria
+ * @param {Array} seminars - Array of seminar objects
+ * @param {string} sortBy - Sort field: 'date', 'title', 'year', 'semester', 'speaker', 'created_at', 'duration', 'capacity'
+ * @param {string} order - Sort order: 'asc' (ascending) or 'desc' (descending)
+ * @returns {Array} - Sorted array of seminars
+ */
+export function sortSeminars(seminars = [], sortBy = 'date', order = 'desc') {
+  if (!Array.isArray(seminars) || seminars.length === 0) {
+    return seminars;
+  }
+
+  const sorted = [...seminars].sort((a, b) => {
+    let valueA, valueB;
+
+    switch (sortBy.toLowerCase()) {
+      case 'year': {
+        // Extract year from date or start_datetime
+        const getYear = (seminar) => {
+          if (seminar.date) {
+            return new Date(seminar.date).getFullYear();
+          }
+          if (seminar.start_datetime) {
+            return new Date(seminar.start_datetime).getFullYear();
+          }
+          return 0;
+        };
+        valueA = getYear(a);
+        valueB = getYear(b);
+        break;
+      }
+
+      case 'semester': {
+        // Extract semester from date or start_datetime (1-2)
+        const getSemester = (seminar) => {
+          let month = 0;
+          if (seminar.date) {
+            month = new Date(seminar.date).getMonth();
+          } else if (seminar.start_datetime) {
+            month = new Date(seminar.start_datetime).getMonth();
+          }
+          // Semester 1: Jan-Jun (months 0-5), Semester 2: Jul-Dec (months 6-11)
+          return month < 6 ? 1 : 2;
+        };
+        valueA = getSemester(a);
+        valueB = getSemester(b);
+        break;
+      }
+
+      case 'date':
+        valueA = new Date(a.date || a.start_datetime || 0).getTime();
+        valueB = new Date(b.date || b.start_datetime || 0).getTime();
+        break;
+
+      case 'title':
+        valueA = (a.title || '').toLowerCase();
+        valueB = (b.title || '').toLowerCase();
+        break;
+
+      case 'speaker':
+        valueA = (a.speaker || '').toLowerCase();
+        valueB = (b.speaker || '').toLowerCase();
+        break;
+
+      case 'created_at':
+        valueA = new Date(a.created_at || 0).getTime();
+        valueB = new Date(b.created_at || 0).getTime();
+        break;
+
+      case 'duration':
+        valueA = a.duration || 0;
+        valueB = b.duration || 0;
+        break;
+
+      case 'capacity':
+        valueA = a.capacity || 0;
+        valueB = b.capacity || 0;
+        break;
+
+      default:
+        return 0;
+    }
+
+    // Handle comparison
+    if (valueA < valueB) return order === 'asc' ? -1 : 1;
+    if (valueA > valueB) return order === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  return sorted;
+}
+
+/**
+ * Sort seminars by multiple criteria (year > semester > date)
+ * @param {Array} seminars - Array of seminar objects
+ * @param {string} order - Sort order: 'asc' or 'desc'
+ * @returns {Array} - Sorted array of seminars
+ */
+export function sortSeminarsByYearSemesterDate(seminars = [], order = 'desc') {
+  if (!Array.isArray(seminars) || seminars.length === 0) {
+    return seminars;
+  }
+
+  const sorted = [...seminars].sort((a, b) => {
+    // Helper functions
+    const getDateInfo = (seminar) => {
+      const date = seminar.date ? new Date(seminar.date) : new Date(seminar.start_datetime || 0);
+      return {
+        year: date.getFullYear(),
+        month: date.getMonth(),
+        semester: date.getMonth() < 6 ? 1 : 2,
+        timestamp: date.getTime(),
+      };
+    };
+
+    const infoA = getDateInfo(a);
+    const infoB = getDateInfo(b);
+
+    // Compare year first
+    if (infoA.year !== infoB.year) {
+      return order === 'desc' ? infoB.year - infoA.year : infoA.year - infoB.year;
+    }
+
+    // Then semester
+    if (infoA.semester !== infoB.semester) {
+      return order === 'desc' ? infoB.semester - infoA.semester : infoA.semester - infoB.semester;
+    }
+
+    // Finally date
+    return order === 'desc' 
+      ? infoB.timestamp - infoA.timestamp 
+      : infoA.timestamp - infoB.timestamp;
+  });
+
+  return sorted;
+}
+
+/**
+ * Group seminars by year and semester
+ * @param {Array} seminars - Array of seminar objects
+ * @returns {Object} - Grouped seminars: { '2025': { 1: [...], 2: [...] }, ... }
+ */
+export function groupSeminarsByYearSemester(seminars = []) {
+  if (!Array.isArray(seminars)) {
+    return {};
+  }
+
+  const grouped = {};
+
+  seminars.forEach((seminar) => {
+    const date = seminar.date ? new Date(seminar.date) : new Date(seminar.start_datetime || 0);
+    const year = date.getFullYear();
+    const semester = date.getMonth() < 6 ? 1 : 2;
+
+    if (!grouped[year]) {
+      grouped[year] = { 1: [], 2: [] };
+    }
+
+    grouped[year][semester].push(seminar);
+  });
+
+  // Sort within each group by date
+  Object.keys(grouped).forEach((year) => {
+    Object.keys(grouped[year]).forEach((semester) => {
+      grouped[year][semester].sort((a, b) => {
+        const timeA = new Date(a.date || a.start_datetime || 0).getTime();
+        const timeB = new Date(b.date || b.start_datetime || 0).getTime();
+        return timeB - timeA; // descending order
+      });
+    });
+  });
+
+  return grouped;
+}
+
 export default {
   fetchSeminars,
   createSeminar,
@@ -429,4 +604,7 @@ export default {
   saveAllSeminars,
   checkInParticipant,
   checkOutParticipant,
+  sortSeminars,
+  sortSeminarsByYearSemesterDate,
+  groupSeminarsByYearSemester,
 };

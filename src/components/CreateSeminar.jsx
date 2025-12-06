@@ -20,6 +20,7 @@ function CreateSeminar({ onLogout }) {
     duration: "",
     speaker: "",
     participants: "",
+    semester: "1",
   });
 
   // time fields: hour (1-12), minute, period (AM/PM)
@@ -27,7 +28,19 @@ function CreateSeminar({ onLogout }) {
   const [endTime, setEndTime] = useState({ hour: "11", minute: "00", period: "AM" });
 
   const handleChange = (e) => {
-    setSeminar({ ...seminar, [e.target.name]: e.target.value });
+    let value = e.target.value;
+    
+    // Special handling for participants field - only allow positive whole numbers
+    if (e.target.name === 'participants') {
+      // Remove all non-digit characters (including -, ., etc)
+      value = value.replace(/\D/g, '');
+      // Ensure it's not empty when there's input
+      if (value === '' && e.target.value !== '') {
+        value = ''; // Clear if all non-digits were removed
+      }
+    }
+    
+    setSeminar({ ...seminar, [e.target.name]: value });
   };
 
   const handleTimeChange = (e) => {
@@ -89,6 +102,7 @@ function CreateSeminar({ onLogout }) {
     speaker: seminar.speaker,
     participants: seminar.participants,
     date: seminar.date || null,
+    semester: seminar.semester || "1",
     start_time: startString,        // human readable
     end_time: endString,            // human readable
     start_datetime,                 // ISO for comparisons & ordering
@@ -124,7 +138,7 @@ function CreateSeminar({ onLogout }) {
   }
 
   // 7) Reset form fields
-  setSeminar({ title: "", duration: "", speaker: "", participants: "" });
+  setSeminar({ title: "", duration: "", speaker: "", participants: "", semester: "1" });
   setTime({ hour: "9", minute: "00", period: "AM" });
   setEndTime({ hour: "11", minute: "00", period: "AM" });
 
@@ -227,12 +241,16 @@ function CreateSeminar({ onLogout }) {
                   <span>👥</span> Max Participants *
                 </label>
                 <input
-                  type="number"
+                  type="text"
                   name="participants"
                   placeholder="50"
                   value={seminar.participants}
                   onChange={handleChange}
+                  onInput={(e) => {
+                    e.target.value = e.target.value.replace(/\D/g, '');
+                  }}
                   required
+                  inputMode="numeric"
                   style={{
                     width: "100%",
                     padding: "0.95rem",
@@ -271,6 +289,35 @@ function CreateSeminar({ onLogout }) {
 
               <div>
                 <label style={{ fontWeight: "600", color: "#1a3a52", display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                  <span>🎓</span> Semester
+                </label>
+                <select
+                  name="semester"
+                  value={seminar.semester || "1"}
+                  onChange={handleChange}
+                  style={{
+                    width: "100%",
+                    padding: "0.95rem",
+                    border: "2px solid #e0e0e0",
+                    borderRadius: "10px",
+                    fontSize: "1rem",
+                    cursor: "pointer",
+                    backgroundColor: "white",
+                    transition: "all 0.3s",
+                    boxSizing: "border-box"
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = "#c41e3a"}
+                  onBlur={(e) => e.target.style.borderColor = "#e0e0e0"}
+                >
+                  <option value="1">Semester 1 (Jan - Jun)</option>
+                  <option value="2">Semester 2 (Jul - Dec)</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+              <div>
+                <label style={{ fontWeight: "600", color: "#1a3a52", display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
                   <span>🕒</span> Start Time
                 </label>
                 <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -287,31 +334,32 @@ function CreateSeminar({ onLogout }) {
                     <option>PM</option>
                   </select>
                 </div>
-                <div style={{ marginTop: 12 }}>
-                  <label style={{ fontWeight: "600", color: "#1a3a52", display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                    <span>⏳</span> End Time
-                  </label>
-                  <div style={{ display: "flex", gap: "0.5rem" }}>
-                    <select name="hour" value={endTime.hour} onChange={handleEndTimeChange} style={{ padding: "0.75rem", borderRadius: 8, border: "2px solid #e0e0e0", fontSize: "1rem", minWidth: 80 }}>
-                      {Array.from({ length: 12 }, (_, i) => String(i + 1)).map(h => (
-                        <option key={h} value={h}>{h}</option>
-                      ))}
-                    </select>
-                    <select name="minute" value={endTime.minute} onChange={handleEndTimeChange} style={{ padding: "0.75rem", borderRadius: 8, border: "2px solid #e0e0e0", fontSize: "1rem", minWidth: 80 }}>
-                      {['00','15','30','45'].map(m => <option key={m} value={m}>{m}</option>)}
-                    </select>
-                    <select name="period" value={endTime.period} onChange={handleEndTimeChange} style={{ padding: "0.75rem", borderRadius: 8, border: "2px solid #e0e0e0", fontSize: "1rem", minWidth: 90 }}>
-                      <option>AM</option>
-                      <option>PM</option>
-                    </select>
-                  </div>
+              </div>
+
+              <div>
+                <label style={{ fontWeight: "600", color: "#1a3a52", display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                  <span>⏳</span> End Time
+                </label>
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <select name="hour" value={endTime.hour} onChange={handleEndTimeChange} style={{ padding: "0.75rem", borderRadius: 8, border: "2px solid #e0e0e0", fontSize: "1rem", minWidth: 80 }}>
+                    {Array.from({ length: 12 }, (_, i) => String(i + 1)).map(h => (
+                      <option key={h} value={h}>{h}</option>
+                    ))}
+                  </select>
+                  <select name="minute" value={endTime.minute} onChange={handleEndTimeChange} style={{ padding: "0.75rem", borderRadius: 8, border: "2px solid #e0e0e0", fontSize: "1rem", minWidth: 80 }}>
+                    {['00','15','30','45'].map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                  <select name="period" value={endTime.period} onChange={handleEndTimeChange} style={{ padding: "0.75rem", borderRadius: 8, border: "2px solid #e0e0e0", fontSize: "1rem", minWidth: 90 }}>
+                    <option>AM</option>
+                    <option>PM</option>
+                  </select>
                 </div>
               </div>
             </div>
 
             <div>
               <label style={{ fontWeight: "600", color: "#1a3a52", display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                <span>�‍🏫</span> Speaker / Trainer Name *
+                <span>🎓‍🏫</span> Speaker / Trainer Name *
               </label>
               <input
                 type="text"

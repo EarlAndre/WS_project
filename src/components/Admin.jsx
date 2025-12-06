@@ -2,7 +2,7 @@
   import Calendar from "react-calendar";
   import "react-calendar/dist/Calendar.css";
   import "../App.css";
-  import { fetchSeminars, createSeminar as dbCreateSeminar, upsertSeminar as dbUpsertSeminar, deleteSeminar as dbDeleteSeminar, fetchJoinedParticipants, saveJoinedParticipant, saveEvaluation, saveAllSeminars } from "../lib/db";
+  import { fetchSeminars, createSeminar as dbCreateSeminar, deleteSeminar as dbDeleteSeminar, fetchJoinedParticipants, saveJoinedParticipant, saveEvaluation, saveAllSeminars, sortSeminars, sortSeminarsByYearSemesterDate, groupSeminarsByYearSemester } from "../lib/db";
   import HamburgerToggle from './HamburgerToggle';
   import { useNavigate } from "react-router-dom";
 
@@ -10,16 +10,17 @@
   function Admin({ onLogout }) {
     const [activeTab, setActiveTab] = useState("dashboard");
     const [seminars, setSeminars] = useState([]);
+    const [sortBy, setSortBy] = useState("date");
+    const [sortOrder, setSortOrder] = useState("desc");
     const [showSidebar, setShowSidebar] = useState(false);
     const [startTime, setStartTime] = useState("");
     const [endTime, setEndTime] = useState("");
     const [title, setTitle] = useState("");
-    const [isEditing, setIsEditing] = useState(false);
-    const [editingId, setEditingId] = useState(null);
     const [duration, setDuration] = useState("");
     const [speaker, setSpeaker] = useState("");
     const [participants, setParticipants] = useState("");
     const [date, setDate] = useState("");
+    const [semester, setSemester] = useState("1");
     const [showCertDesignModal, setShowCertDesignModal] = useState(false);
     const [certDesign, setCertDesign] = useState({
       backgroundType: 'gradient', // 'gradient', 'color', 'image'
@@ -119,11 +120,12 @@
         speaker,
         participants,
         date,
+        semester,
         start_datetime: toISO(startTime),
         end_datetime: toISO(endTime),
         start_time: humanTime(startTime),
         end_time: humanTime(endTime),
-        joinedParticipants: [], // Track who joined
+        joinedParticipants: [],
         questions: [   
           {
             id: "q1",
@@ -141,98 +143,46 @@
             id: "q3",
             question: "Any suggestions?",
             type: "text", 
-          } // Default evaluation questions
+          }
         ]
       };
-        // Try to persist to Supabase first
-        try {
-          if (isEditing && editingId) {
-            const payload = { ...newSeminar, id: editingId };
-            const { data, error } = await dbUpsertSeminar(payload);
-            if (error) {
-              const updated = seminars.map(s => s.id === editingId ? payload : s);
-              setSeminars(updated);
-              localStorage.setItem("seminars", JSON.stringify(updated));
-              window.dispatchEvent(new CustomEvent('app-banner', { detail: "Seminar updated locally (supabase error)." }));
-            } else {
-              const updatedRow = data && data[0] ? data[0] : payload;
-              const updated = seminars.map(s => s.id === editingId ? updatedRow : s);
-              setSeminars(updated);
-              localStorage.setItem("seminars", JSON.stringify(updated));
-              setTitle(""); setDuration(""); setSpeaker(""); setParticipants(""); setDate("");
-              setStartTime(""); setEndTime("");
-              setIsEditing(false); setEditingId(null);
-              setActiveTab('list');
-              window.dispatchEvent(new CustomEvent('app-banner', { detail: "Seminar updated successfully!" }));
-            }
-          } else {
-            const { data, error } = await dbCreateSeminar(newSeminar);
-            if (error) {
-              // fallback to local storage
-              const updated = [...seminars, newSeminar];
-              setSeminars(updated);
-              localStorage.setItem("seminars", JSON.stringify(updated));
-              window.dispatchEvent(new CustomEvent('app-banner', { detail: "Seminar saved locally (offline or API error)." }));
-            } else {
-              // data is an array with inserted row
-              const created = data && data[0] ? data[0] : newSeminar;
-              const updated = [...seminars, created];
-              setSeminars(updated);
-              localStorage.setItem("seminars", JSON.stringify(updated));
-              setTitle("");
-              setDuration("");
-              setSpeaker("");
-              setParticipants("");
-              setStartTime(""); setEndTime("");
-              setDate("");
-              window.dispatchEvent(new CustomEvent('app-banner', { detail: "Seminar created successfully!" }));
-            }
-          }
-        } catch (err) {
-          const updated = [...seminars, newSeminar];
+
+      try {
+        const createPayload = { ...newSeminar, created_at: new Date().toISOString() };
+        const { data, error } = await dbCreateSeminar(createPayload);
+        if (error) {
+          const updated = [...seminars, createPayload];
           setSeminars(updated);
           localStorage.setItem("seminars", JSON.stringify(updated));
-          window.dispatchEvent(new CustomEvent('app-banner', { detail: "Seminar saved locally (unexpected error)." }));
+          window.dispatchEvent(new CustomEvent('app-banner', { detail: "Seminar saved locally (offline or API error)." }));
+        } else {
+          const created = data && data[0] ? data[0] : createPayload;
+          const updated = [...seminars, created];
+          setSeminars(updated);
+          localStorage.setItem("seminars", JSON.stringify(updated));
+          setTitle("");
+          setDuration("");
+          setSpeaker("");
+          setParticipants("");
+          setStartTime(""); 
+          setEndTime("");
+          setDate("");
+          setSemester("1");
+          window.dispatchEvent(new CustomEvent('app-banner', { detail: "✅ Seminar created successfully!" }));
         }
+      } catch (err) {
+        console.error('Error saving seminar:', err);
+        const createPayload = { ...newSeminar, created_at: new Date().toISOString() };
+        const updated = [...seminars, createPayload];
+        setSeminars(updated);
+        localStorage.setItem("seminars", JSON.stringify(updated));
+        window.dispatchEvent(new CustomEvent('app-banner', { detail: "Seminar saved locally (unexpected error)." }));
+      }
     };
 
       const handleEdit = (seminar) => {
-        setIsEditing(true);
-        setEditingId(seminar.id || null);
-        setTitle(seminar.title || "");
-        setDuration(seminar.duration || "");
-        setSpeaker(seminar.speaker || "");
-        setParticipants(seminar.participants || "");
-        setDate(seminar.date ? (typeof seminar.date === 'string' && seminar.date.includes('T') ? seminar.date.split('T')[0] : seminar.date) : "");
-        // populate datetime-local controls from existing values if present
-        try {
-          if (seminar.start_datetime) {
-            setStartTime(new Date(seminar.start_datetime).toISOString().slice(0,16));
-          } else if (seminar.start_time && seminar.date) {
-            // combine date + time (assumes start_time like '09:00 AM')
-            const parsed = new Date(`${seminar.date} ${seminar.start_time}`);
-            if (!isNaN(parsed)) setStartTime(parsed.toISOString().slice(0,16));
-            else setStartTime("");
-          } else {
-            setStartTime("");
-          }
-        } catch (err) {
-          setStartTime("");
-        }
-        try {
-          if (seminar.end_datetime) {
-            setEndTime(new Date(seminar.end_datetime).toISOString().slice(0,16));
-          } else if (seminar.end_time && seminar.date) {
-            const parsed = new Date(`${seminar.date} ${seminar.end_time}`);
-            if (!isNaN(parsed)) setEndTime(parsed.toISOString().slice(0,16));
-            else setEndTime("");
-          } else {
-            setEndTime("");
-          }
-        } catch (err) {
-          setEndTime("");
-        }
-        setActiveTab('create');
+        // Simply navigate to edit page with seminar ID
+        navigate(`/edit-seminar/${seminar.id}`);
       };
 
     const handleDelete = async (index) => {
@@ -1010,6 +960,34 @@
                   </div>
                 </div>
 
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+                  <div>
+                    <label style={{ fontWeight: "600", color: "#1a3a52", display: "block", marginBottom: "0.5rem" }}>
+                      Semester
+                    </label>
+                    <select 
+                      value={semester} 
+                      onChange={(e) => setSemester(e.target.value)} 
+                      style={{
+                        width: "100%",
+                        padding: "0.95rem",
+                        border: "2px solid #e0e0e0",
+                        borderRadius: "10px",
+                        fontSize: "1rem",
+                        cursor: "pointer",
+                        backgroundColor: "white",
+                        transition: "all 0.3s",
+                        boxSizing: "border-box"
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = "#c41e3a"}
+                      onBlur={(e) => e.target.style.borderColor = "#e0e0e0"}
+                    >
+                      <option value="1">Semester 1 (Jan - Jun)</option>
+                      <option value="2">Semester 2 (Jul - Dec)</option>
+                    </select>
+                  </div>
+                </div>
+
                 <div>
                   <label style={{ fontWeight: "600", color: "#1a3a52", display: "block", marginBottom: "0.5rem" }}>
                     Speaker / Trainer
@@ -1087,7 +1065,7 @@
                   onMouseOver={(e) => e.target.style.boxShadow = "0 6px 20px rgba(196, 30, 58, 0.3)"}
                   onMouseOut={(e) => e.target.style.boxShadow = "0 4px 15px rgba(196, 30, 58, 0.2)"}
                 >
-                  Create Seminar
+                  ✅ Create Seminar
                 </button>
               </form>
             </div>
@@ -1096,6 +1074,102 @@
           {/* Seminar List Section */}
           {activeTab === "list" && (
             <div className="seminar-list-container">
+              {/* Sorting Controls */}
+              <div style={{
+                marginBottom: "1.5rem",
+                padding: "1rem",
+                background: "#f8fafc",
+                borderRadius: "12px",
+                border: "1px solid #e0e0e0",
+                display: "flex",
+                gap: "1rem",
+                flexWrap: "wrap",
+                alignItems: "center"
+              }}>
+                <label style={{ fontWeight: "600", color: "#1a3a52" }}>Sort by:</label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  style={{
+                    padding: "0.6rem 0.8rem",
+                    borderRadius: "6px",
+                    border: "1px solid #e0e0e0",
+                    fontSize: "0.95rem",
+                    cursor: "pointer",
+                    background: "white",
+                    color: "#1a3a52"
+                  }}
+                >
+                  <option value="date">Date</option>
+                  <option value="year">Year</option>
+                  <option value="semester">Semester</option>
+                  <option value="duration">Duration</option>
+                  <option value="capacity">Capacity</option>
+                  <option value="created_at">Created At</option>
+                </select>
+
+                <select
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value)}
+                  style={{
+                    padding: "0.6rem 0.8rem",
+                    borderRadius: "6px",
+                    border: "1px solid #e0e0e0",
+                    fontSize: "0.95rem",
+                    cursor: "pointer",
+                    background: "white",
+                    color: "#1a3a52"
+                  }}
+                >
+                  <option value="desc">Descending ↓</option>
+                  <option value="asc">Ascending ↑</option>
+                </select>
+
+                <button
+                  onClick={() => {
+                    const sorted = sortSeminars(seminars, sortBy, sortOrder);
+                    setSeminars(sorted);
+                  }}
+                  style={{
+                    padding: "0.6rem 1.2rem",
+                    background: "#c41e3a",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontWeight: "600",
+                    fontSize: "0.95rem",
+                    transition: "all 0.3s"
+                  }}
+                  onMouseOver={(e) => e.target.style.background = "#a01831"}
+                  onMouseOut={(e) => e.target.style.background = "#c41e3a"}
+                >
+                  Apply Sort
+                </button>
+
+                <button
+                  onClick={() => {
+                    const sorted = sortSeminarsByYearSemesterDate(seminars, 'desc');
+                    setSeminars(sorted);
+                  }}
+                  style={{
+                    padding: "0.6rem 1.2rem",
+                    background: "#1a3a52",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontWeight: "600",
+                    fontSize: "0.95rem",
+                    transition: "all 0.3s"
+                  }}
+                  onMouseOver={(e) => e.target.style.background = "#0f2640"}
+                  onMouseOut={(e) => e.target.style.background = "#1a3a52"}
+                >
+                  Sort by Year/Semester/Date
+                </button>
+              </div>
+
               {seminars.length === 0 ? (
                 <div style={{
                   background: "#f8fafc",
@@ -1122,7 +1196,9 @@
                         transition: "all 0.3s",
                         border: "2px solid #f0f0f0",
                         cursor: "pointer",
-                        position: "relative"
+                        position: "relative",
+                        flex: "1 1 300px",
+                        minWidth: "300px"
                       }}
                                                 
                       onMouseOver={(e) => {
@@ -1168,6 +1244,10 @@
                           {new Date(s.date).toLocaleDateString()}
                         </p>
                         <p style={{ margin: 0, color: "#666", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <strong style={{ color: "#1a3a52", width: "80px" }}>Semester:</strong>
+                          {s.semester === "1" ? "Semester 1 (Jan - Jun)" : "Semester 2 (Jul - Dec)"}
+                        </p>
+                        <p style={{ margin: 0, color: "#666", display: "flex", alignItems: "center", gap: "0.5rem" }}>
                           <strong style={{ color: "#1a3a52", width: "80px" }}>Duration:</strong>
                           {s.duration} hours
                         </p>
@@ -1179,6 +1259,12 @@
                           <strong style={{ color: "#1a3a52", width: "80px" }}>Capacity:</strong>
                           {s.participants} max
                         </p>
+                        {s.created_at && (
+                          <p style={{ margin: 0, color: "#999", display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem" }}>
+                            <strong style={{ color: "#1a3a52", width: "80px" }}>Created:</strong>
+                            {new Date(s.created_at).toLocaleDateString()} {new Date(s.created_at).toLocaleTimeString()}
+                          </p>
+                        )}
                       </div>
 
                       <button 

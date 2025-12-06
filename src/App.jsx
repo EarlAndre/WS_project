@@ -6,6 +6,7 @@ import Admin from "./components/Admin";
 import Profile from "./components/Profile";
 import Participant from "./components/Participant";
 import CreateSeminar from "./components/CreateSeminar";
+import EditSeminar from "./components/EditSeminar";
 import QRRedirect from "./components/QRRedirect";
 
 
@@ -113,6 +114,10 @@ function App() {
         <Route
           path="/create-seminar"
           element={<CreateSeminar onLogout={handleLogout} />}
+        />
+        <Route
+          path="/edit-seminar/:id"
+          element={<EditSeminar onLogout={handleLogout} />}
         />
         <Route
           path="/qr"
