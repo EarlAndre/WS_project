@@ -11,6 +11,7 @@ class Seminar(models.Model):
 	end_time = models.CharField(max_length=32, null=True, blank=True)
 	start_datetime = models.DateTimeField(null=True, blank=True)
 	end_datetime = models.DateTimeField(null=True, blank=True)
+	semester = models.CharField(max_length=10, null=True, blank=True, default="1")
 	questions = models.JSONField(null=True, blank=True)
 	metadata = models.JSONField(null=True, blank=True)
 	certificate_template_url = models.URLField(max_length=1024, null=True, blank=True)
